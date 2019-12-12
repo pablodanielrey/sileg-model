@@ -51,6 +51,13 @@ class Designation(Base):
 
     comments = Column(String)
 
+    _types = [
+        'Original',
+        'Prorroga',
+        'Extensión',
+        'Baja'
+    ]
+
     """
     _mapper_args__ = {
         'polymorphic_on':tipo,
