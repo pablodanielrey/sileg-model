@@ -24,18 +24,13 @@ def get_session(echo=False):
         engine.dispose()
 
 from .entities import Base
-from .SilegModel import SilegModel
-
-__all__ = [
-    'SilegModel'
-]
 
 def create_tables():
 
     from .entities.Function import Function
     from .entities.Place import Place
     from .entities.Designation import Designation
-
+    from .entities.LeaveLicense import PersonalLeaveLicense, DesignationLeaveLicense
 
     engine = create_engine('postgresql://{}:{}@{}:{}/{}'.format(
         os.environ['SILEG_DB_USER'],
