@@ -1,0 +1,16 @@
+FROM python:3.7.2-stretch
+
+#RUN apt-get update && apt-get install -y \
+#  git \
+#  && apt-get clean \
+#  && rm -rf /var/lib/apt/lists/*
+
+COPY docker/entrypoint.sh /
+COPY docker/instalar.sh /
+COPY docker/.pypirc /root/
+
+COPY src /src
+WORKDIR /src
+#RUN cd /src && python setup.py sdist upload -r internal
+
+ENTRYPOINT ["/entrypoint.sh"]
