@@ -3,15 +3,13 @@ import contextlib
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-port = os.environ.get('SILEG_DB_PORT', '5432')
-
 @contextlib.contextmanager
 def get_session(echo=False):
     engine = create_engine('postgresql://{}:{}@{}:{}/{}'.format(
         os.environ['SILEG_DB_USER'],
         os.environ['SILEG_DB_PASSWORD'],
         os.environ['SILEG_DB_HOST'],
-        port,
+        os.environ['SILEG_DB_PORT'],
         os.environ['SILEG_DB_NAME']
     ), echo=echo)
 
@@ -36,7 +34,7 @@ def create_tables():
         os.environ['SILEG_DB_USER'],
         os.environ['SILEG_DB_PASSWORD'],
         os.environ['SILEG_DB_HOST'],
-        port,
+        os.environ['SILEG_DB_PORT'],
         os.environ['SILEG_DB_NAME']
     ), echo=True)
     Base.metadata.create_all(engine)
