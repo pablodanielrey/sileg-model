@@ -36,7 +36,7 @@ class Designation(Base):
     #categorias = relationship('CategoriaDesignacion', secondary=categoria_designacion_table, back_populates='designaciones')
 
     designation_id = Column(String, ForeignKey('designations.id'))
-    designation = relationship('Designation', foreign_keys=[designation_id])
+    designations = relationship('Designation', foreign_keys=[designation_id])
 
     user_id = Column(String)
 
