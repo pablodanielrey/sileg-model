@@ -1,13 +1,30 @@
-from sqlalchemy import Column, String, ForeignKey, DateTime
+from sqlalchemy import Column, String, ForeignKey, DateTime, Enum as SQLEnum
 from sqlalchemy.orm import relationship, backref
+
+from enum import Enum
+
 from . import Base
+
+class PlaceTypes(Enum):
+    UNIVERSIDAD = 'Universidad'
+    FACULTAD = 'Facultad'
+    DIRECCION = 'Dirección'
+    INSTITUTO = 'Instituto'
+    ESCUELA = 'Escuela'
+    SEMINRARIO = 'Seminario'
+    AREA = 'Area'
+    DIVISION = 'División'
+    SECRETARIA = 'Secretaría'
+    PROSECRETARIA = 'Pro-Secretaría'
+    MAESTRIA = 'Maestría'
+    CENTRO = 'Centro'
 
 
 class Place(Base):
     __tablename__ = 'places'
 
     name = Column(String)
-    type = Column(String)
+    type = Column(SQLEnum(PlaceTypes))
     description = Column(String)
 
     number = Column(String)
@@ -16,20 +33,6 @@ class Place(Base):
 
     parent_id = Column(String, ForeignKey('places.id'))
     children = relationship("Place",  foreign_keys=[parent_id])
-
-    _types = [
-        'Universidad',
-        'Facultad',
-        'Instituto',
-        'Escuela',
-        'Seminario',
-        'Area',
-        'División',
-        'Secretaría',
-        'Pro-Secretaría',
-        'Maestría',
-        'Centro'
-    ]
 
     """
     __mapper_args__ = {

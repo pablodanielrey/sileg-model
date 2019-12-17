@@ -6,6 +6,7 @@ def insert_model_data():
 
     from sileg_model.model import open_session
     from sileg_model.model.entities.Function import Function, FunctionTypes
+    from sileg_model.model.entities.Place import Place, PlaceTypes
 
     def _authority_functions():
         return ['Decano', 'Vicedecano', 'Secretario', 'Prosecretario']
@@ -42,8 +43,24 @@ def insert_model_data():
                 ff.type = FunctionTypes.DOCENTE
                 session.add(ff)
 
+    def _get_places():
+        return [
+            'Categra1',
+            'DiTeSI',
+            'Secretaría Académica'
+        ]
+
+    def _insert_places(session):
+        for p in _get_places():
+            if session.query(Place.id).filter(Place.name == p).count() <= 0:
+                pp = Place()
+                pp.type = PlaceTypes.DIRECCION
+                pp.name = p
+                session.add(pp)
+
     with open_session() as ss:
         _insert_functions(ss)
+        _insert_places(ss)
         ss.commit()
 
 
