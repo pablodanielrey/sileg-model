@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 @contextlib.contextmanager
-def get_session(echo=False):
+def open_session(echo=False):
     engine = create_engine('postgresql://{}:{}@{}:{}/{}'.format(
         os.environ['SILEG_DB_USER'],
         os.environ['SILEG_DB_PASSWORD'],
