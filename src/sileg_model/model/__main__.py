@@ -1,7 +1,4 @@
 
-from sileg_model.model import create_tables
-create_tables()
-
 def insert_model_data():
     """
         Se generan los datos para inicializar la base de datos.
@@ -42,3 +39,8 @@ def insert_model_data():
     with open_session() as ss:
         _insert_functions(ss)
         ss.commit()
+
+
+from sileg_model.model import create_tables
+create_tables()
+insert_model_data()
