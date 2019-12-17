@@ -1,0 +1,1 @@
+docker run --rm -ti -v $(pwd)/src:/src sileg-model /instalar.sh
