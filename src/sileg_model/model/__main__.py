@@ -11,7 +11,7 @@ def insert_model_data():
         return ['Decano', 'Vicedecano', 'Secretario', 'Prosecretario']
 
     def _teacher_functions():
-        functions = ['Adjunto', 'Asociado', 'Ayudante Alumno', 'Ayudante Diplomado', 'Jefe de Auxiliares Docentes', 'Jefe de Trabajos Prácticos']
+        functions = ['Titular', 'Adjunto', 'Asociado', 'Ayudante Alumno', 'Ayudante Diplomado', 'Jefe de Auxiliares Docentes', 'Jefe de Trabajos Prácticos']
         dedications = ['Exclusiva', 'Semi Dedicación', 'Semi Exclusiva', 'Simple', 'Tiempo Completo']
         caracters = ['Ad honorem', 'Interino', 'Ordinario', 'Suplente']
         rf = []
@@ -19,6 +19,12 @@ def insert_model_data():
             for d in dedications:
                 for c in caracters:
                     rf.append(f'{f} - {d} - {c}')
+
+        extra = ['Consulto', 'Emérito', 'Visitante']
+        for f in functions:
+            for e in extra:
+                rf.append(f'{f} - {e}')
+
         return rf
 
     def _insert_functions(session):
