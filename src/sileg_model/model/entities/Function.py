@@ -1,26 +1,25 @@
-from sqlalchemy import Column, String, Numeric, ForeignKey, DateTime
+from sqlalchemy import Column, String, Numeric, ForeignKey, DateTime, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
+from enum import Enum
+
 from . import Base
+
+class FunctionTypes(Enum):
+    DOCENTE = 'Docente'
+    NODOCENTE = 'NoDocente'
+    AUTORIDAD = 'Autoridad'
+    PRE_GRADO = 'Pre Grado'
+    ALUMNO = 'Alumno'
 
 class Function(Base):
 
     __tablename__ = 'functions'
 
     name = Column(String)
-    type = Column(String)
+    type = Column(SQLEnum(FunctionTypes))
     description = Column(String)
 
-
-    _types = [
-        'Docente',
-        'No Docente',
-        'Autoridad',
-        'Pre Grado',
-        'Alumno',
-        'Ingreso',
-        'Indefinido'
-    ]
 
     """
     __mapper_args__ = {

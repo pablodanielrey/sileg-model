@@ -15,7 +15,7 @@ class Place(Base):
     email = Column(String)
 
     parent_id = Column(String, ForeignKey('places.id'))
-    children = relationship("Place",  foreign_keys=[parent_id], backref=backref('parent_id', remote_side="Place.id"))
+    children = relationship("Place",  foreign_keys=[parent_id])
 
     _types = [
         'Universidad',
