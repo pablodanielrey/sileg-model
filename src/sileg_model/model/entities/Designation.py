@@ -1,5 +1,7 @@
-from sqlalchemy import Column, String, Date, Table, ForeignKey, Boolean
+from sqlalchemy import Column, String, Date, Table, ForeignKey, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import relationship
+
+from enum import Enum
 
 from . import Base
 
@@ -20,6 +22,12 @@ class Caracter(Base):
     old_id = Column(String)
 """
 
+class DesignationTypes(Enum):
+    ORIGINAL = 'ORIGINAL'
+    EXTENSION = 'EXTENSION'
+    PROMOTION = 'PROMOTION'
+    REPLACEMENT = 'REPLACEMENT'
+
 class Designation(Base):
 
     __tablename__ = 'designations'
@@ -32,7 +40,7 @@ class Designation(Base):
     res = Column(String)
     cor = Column(String)
 
-    type = Column(String)
+    type = Column(SQLEnum(DesignationTypes))
     #categorias = relationship('CategoriaDesignacion', secondary=categoria_designacion_table, back_populates='designaciones')
 
     designation_id = Column(String, ForeignKey('designations.id'))
