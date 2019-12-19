@@ -2,6 +2,7 @@
 from .entities.Function import Function, FunctionTypes
 from .entities.Designation import Designation, DesignationEndTypes
 from .entities.Place import PlaceTypes, Place
+from .entities.LeaveLicense import PersonalLeaveLicense, DesignationLeaveLicense
 
 class SilegModel:
 
@@ -22,3 +23,14 @@ class SilegModel:
 
     def get_all_places(self, session):
         return [p.id for p in session.query(Place.id).all()]
+
+    def get_user_licenses(self, session, uid):
+        return [l.id for l in session.query(PersonalLeaveLicense.id).filter(PersonalLeaveLicense.user_id == uid).all()]
+
+    def get_user_designation_licenses(self, session, uid):
+        dids = session.query(Designation.id).filter(Designation.user_id == uid)
+        return [l.id for l in session.query(DesignationLeaveLicense.id).filter(DesignationLeaveLicense.designation_id.in_(dids)).all()]
+
+
+    def get_licenses(self, session, lids=[]):
+        return session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.id.in_(lids)).all()
