@@ -32,5 +32,8 @@ class SilegModel:
         return [l.id for l in session.query(DesignationLeaveLicense.id).filter(DesignationLeaveLicense.designation_id.in_(dids)).all()]
 
 
-    def get_licenses(self, session, lids=[]):
+    def get_ulicenses(self, session, lids=[]):
+        return session.query(PersonalLeaveLicense).filter(PersonalLeaveLicense.id.in_(lids)).all()
+
+    def get_dlicenses(self, session, lids=[]):
         return session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.id.in_(lids)).all()
