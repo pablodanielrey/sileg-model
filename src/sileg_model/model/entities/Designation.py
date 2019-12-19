@@ -22,6 +22,13 @@ class Caracter(Base):
     old_id = Column(String)
 """
 
+class DesignationEndTypes(Enum):
+    INDETERMINATE = 'INDETERMINATE'
+    CONVALIDATION = 'CONVALIDATION'
+    CONTEST = 'CONTEST'
+    ENDDATE = 'ENDDATE'
+    REPLACEMENT = 'REPLACEMENT'
+
 class DesignationTypes(Enum):
     ORIGINAL = 'ORIGINAL'
     EXTENSION = 'EXTENSION'
@@ -34,6 +41,8 @@ class Designation(Base):
 
     start = Column(Date)
     end = Column(Date)
+    end_type = Column(SQLEnum(DesignationEndTypes))
+    
     historic = Column(Boolean)
 
     exp = Column(String)
