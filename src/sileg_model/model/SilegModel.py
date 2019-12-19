@@ -1,9 +1,12 @@
 
 from .entities.Function import Function, FunctionTypes
-from .entities.Designation import Designation
+from .entities.Designation import Designation, DesignationEndTypes
 from .entities.Place import PlaceTypes, Place
 
 class SilegModel:
+
+    def get_designation_end_types(self):
+        return [d.value for d in DesignationEndTypes]
 
     def get_functions(self, session):
         return session.query(Function).all()
@@ -15,7 +18,6 @@ class SilegModel:
         return [d.id for d in session.query(Designation.id).filter(Designation.user_id == uid).all()]
 
     def get_places(self, session, pids=[]):
-        print(pids)
         return session.query(Place).filter(Place.id.in_(pids)).all()
 
     def get_all_places(self, session):
