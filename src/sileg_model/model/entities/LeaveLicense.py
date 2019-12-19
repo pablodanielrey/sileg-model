@@ -8,6 +8,11 @@ from . import Base
 
 class LicenseTypes(Enum):
     INDETERMINATE = 'INDETERMINATE'
+    S = 'S'
+    RS = 'RS'
+    RC = 'RC'
+    LIC = 'LIC'
+
 
 class LicenseEndTypes(Enum):
     INDETERMINATE = 'INDETERMINATE'
