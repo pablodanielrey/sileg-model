@@ -1,7 +1,16 @@
-from sqlalchemy import Column, String, Date, Table, ForeignKey, Boolean
+from sqlalchemy import Column, String, Date, Table, ForeignKey, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
+from enum import Enum
+
 from . import Base
+
+
+class LicenseTypes(Enum):
+    INDETERMINATE = 'INDETERMINATE'
+
+class LicenseEndTypes(Enum):
+    INDETERMINATE = 'INDETERMINATE'
 
 class PersonalLeaveLicense(Base):
 
@@ -9,16 +18,17 @@ class PersonalLeaveLicense(Base):
 
     user_id = Column(String)
 
+    type = Column(SQLEnum(LicenseTypes))
+
     start = Column(Date)
     end = Column(Date)
+    end_type = Column(SQLEnum(LicenseEndTypes))
 
     historic = Boolean
 
     exp = Column(String)
     res = Column(String)
     cor = Column(String)
-
-    type = Column(String)
 
     comments = Column(String)
 
