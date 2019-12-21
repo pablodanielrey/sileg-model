@@ -17,6 +17,7 @@ class LicenseTypes(Enum):
 class LicenseEndTypes(Enum):
     INDETERMINATE = 'INDETERMINATE'
 
+
 class PersonalLeaveLicense(Base):
 
     __tablename__ = 'personal_leave_licenses'
@@ -54,6 +55,6 @@ class DesignationLeaveLicense(Base):
     res = Column(String)
     cor = Column(String)
 
-    type = Column(String)
+    type = Column(SQLEnum(LicenseTypes))
 
     comments = Column(String)
