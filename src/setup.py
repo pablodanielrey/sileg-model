@@ -29,7 +29,8 @@ setup(name='sileg-model',
           install_requires=[
                             'psycopg2-binary',
                             'requests',
-                            'SQLAlchemy'
+                            'SQLAlchemy',
+                            'users-model'
                           ],
           entry_points={
           }
