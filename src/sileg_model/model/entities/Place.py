@@ -8,16 +8,20 @@ from . import Base
 class PlaceTypes(Enum):
     UNIVERSIDAD = 'Universidad'
     FACULTAD = 'Facultad'
+    SECRETARIA = 'Secretaría'
+    PROSECRETARIA = 'Pro-Secretaría'
+    DEPARTAMENTO = 'Departamento'
     DIRECCION = 'Dirección'
     INSTITUTO = 'Instituto'
     ESCUELA = 'Escuela'
     SEMINRARIO = 'Seminario'
     AREA = 'Area'
     DIVISION = 'División'
-    SECRETARIA = 'Secretaría'
-    PROSECRETARIA = 'Pro-Secretaría'
     MAESTRIA = 'Maestría'
-    CENTRO = 'Centro'
+    CENTRO = 'Centro',
+    MATERIA = 'Materia',
+    CATEDRA = 'Catedra',
+    
 
 
 class Place(Base):

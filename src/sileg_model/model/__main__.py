@@ -9,12 +9,21 @@ def insert_model_data():
     from sileg_model.model.entities.Place import Place, PlaceTypes
 
     def _authority_functions():
-        return ['Decano', 'Vicedecano', 'Secretario', 'Prosecretario']
+        functions = ['Decano', 'Vicedecano', 'Secretario', 'Prosecretario']
+        dedications = ['Exclusiva', 'Simple', 'Tiempo Completo', 'A-H']
+        caracters = ['Interino', 'Ad-Honorem']
+        rf = []
+        for f in functions:
+            for d in dedications:
+                for c in caracters:
+                    rf.append(f'{f} - {d} - {c}')
+        return rf
+
 
     def _teacher_functions():
         functions = ['Titular', 'Adjunto', 'Asociado', 'Ayudante Alumno', 'Ayudante Diplomado', 'Jefe de Auxiliares Docentes', 'Jefe de Trabajos Prácticos']
-        dedications = ['Exclusiva', 'Semi Dedicación', 'Semi Exclusiva', 'Simple', 'Tiempo Completo']
-        caracters = ['Ad honorem', 'Interino', 'Ordinario', 'Suplente']
+        dedications = ['Exclusiva', 'Semi Dedicación', 'Semi Exclusiva', 'Simple', 'Tiempo Completo', 'A-H']
+        caracters = ['Ad-Honorem', 'Interino', 'Ordinario', 'Suplente']
         rf = []
         for f in functions:
             for d in dedications:
@@ -44,11 +53,7 @@ def insert_model_data():
                 session.add(ff)
 
     def _get_places():
-        return [
-            'Categra1',
-            'DiTeSI',
-            'Secretaría Académica'
-        ]
+        return []
 
     def _insert_places(session):
         for p in _get_places():
@@ -60,7 +65,7 @@ def insert_model_data():
 
     with open_session() as ss:
         _insert_functions(ss)
-        _insert_places(ss)
+        #_insert_places(ss)
         ss.commit()
 
 
