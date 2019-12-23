@@ -16,9 +16,6 @@ class MyBaseClass:
     updated = Column(DateTime, onupdate=func.now())
     deleted = Column(DateTime)
 
-    def __init__(self):
-        self.id = generateId()
-
 #Base = declarative_base(cls=(JsonSerializableBase,MyBaseClass))
 Base = declarative_base(cls=MyBaseClass)
 
