@@ -34,7 +34,8 @@ try:
 
         """ obtengo las designaciones originales para esa persona en cátedras """
 
-        cur.execute("""select desig_id, tipodedicacion_nombre, tipocaracter_nombre, tipocargo_nombre, dd.desig_catxmat_id, dd.desig_fecha_desde, dd.desig_fecha_hasta, dd.desig_resolucionalta_id from designacion_docente dd 
+        cur.execute("""select desig_id, tipodedicacion_nombre, tipocaracter_nombre, tipocargo_nombre, dd.desig_catxmat_id, dd.desig_fecha_desde, dd.desig_fecha_hasta, dd.desig_resolucionalta_id,
+                       dd.desig_fecha_baja, dd.desig_resolucionbaja_id from designacion_docente dd 
                        left join tipo_dedicacion td on (dd.desig_tipodedicacion_id = td.tipodedicacion_id) 
                        left join tipo_caracter tc on (dd.desig_tipocaracter_id = tc.tipocaracter_id) 
                        left join tipo_cargo tcc on (dd.desig_tipocargo_id = tcc.tipocargo_id) where dd.desig_catxmat_id is not null and dd.desig_empleado_id = %s""", (empleado_id,))
@@ -48,7 +49,9 @@ try:
                 'cxm': p[4],
                 'desde': p[5],
                 'hasta': p[6],
-                'res':p[7]
+                'res':p[7],
+                'fecha_baja': p[8],
+                'res_baja': p[9]
             })
             
         for f in functions:
@@ -60,17 +63,21 @@ try:
             #cargo la info de las prorrogas.
             did = f['did']
             f['prorrogas'] = []
-            cur.execute('select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id from prorroga where prorroga_prorroga_de_id = %s', (did,))
+            cur.execute('select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id, prorroga_resolucionbaja_id, prorroga_fecha_baja from prorroga where prorroga_prorroga_de_id = %s', (did,))
             for p in cur.fetchall():
                 f['prorrogas'].append({
                     'desde': p[0],
                     'hasta': p[1],
-                    'res': p[2]
+                    'res': p[2],
+                    'res_baja': p[3],
+                    'fecha_baja': p[4]
                 })
 
             # cargo la info de las extensiones de cada cargo.
             f['extensiones'] = []
-            cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_catxmat_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, dd.extension_resolucionalta_id from extension dd 
+            cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_catxmat_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, dd.extension_resolucionalta_id,
+                        dd.extension_resolucionbaja_id, dd.extension_fecha_baja
+                        from extension dd 
                         left join tipo_dedicacion td on (dd.extension_nuevadedicacion_id = td.tipodedicacion_id) 
                         where dd.extension_catxmat_id is not null and dd.extension_designacion_id = %s""", (did,))
             for p in cur.fetchall():
@@ -88,16 +95,20 @@ try:
                     'desde': p[3],
                     'hasta': p[4],
                     'res':p[5],
+                    'res_baja': p[6],
+                    'fecha_baja': p[7],
                     'prorrogas': []
                 }
 
                 #cargo la info de las prorrogas de extensión
-                cur.execute('select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id from prorroga where prorroga_prorroga_de_id = %s', (did,))
+                cur.execute('select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id, prorroga_resolucionbaja_id, prorroga_fecha_baja from prorroga where prorroga_prorroga_de_id = %s', (did,))
                 for pe in cur.fetchall():
                     extension_['prorrogas'].append({
                         'desde': pe[0],
                         'hasta': pe[1],
-                        'res': pe[2]
+                        'res': pe[2],
+                        'res_baja': p[3],
+                        'fecha_baja': p[4]
                     })
 
                 f['extensiones'].append(extension_)
@@ -168,6 +179,18 @@ with open_session() as session:
             session.add(d)
             session.commit()
 
+            """ genero la baja en el caso de que tenga """
+            if p['fecha_baja']:
+                db = Designation()
+                db.type = DesignationTypes.DISCHARGE
+                db.designation_id = did
+                db.user_id = uid
+                db.start = p['fecha_baja']
+                db.end_type = DesignationEndTypes.INDETERMINATE
+                db.res = p['res_baja']
+                session.add(db)
+                session.commit()
+
             """ genero las prorrogas y las almaceno dentro del modelo """
             for pp in p['prorrogas']:
                 print(f"Generando prorroga {pp['desde']}")
@@ -215,6 +238,20 @@ with open_session() as session:
                 dp.place_id = cex
                 session.add(dp)
                 session.commit()
+
+                """ genero las bajas de las extensiones """
+                if pp['fecha_baja']:
+                    db = Designation()
+                    db.type = DesignationTypes.DISCHARGE
+                    db.designation_id = dpeid
+                    db.user_id = uid
+                    db.start = pp['fecha_baja']
+                    db.end_type = DesignationEndTypes.INDETERMINATE
+                    db.res = pp['res_baja']
+                    session.add(db)
+                    session.commit()
+
+                """ genero las prorrogas de las extensiones """
 
                 for pe in pp['prorrogas']:
                     print(f"Generando prorroga {pp['desde']}")

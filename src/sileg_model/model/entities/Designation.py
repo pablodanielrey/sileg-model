@@ -26,6 +26,7 @@ class DesignationEndTypes(Enum):
     INDETERMINATE = 'INDETERMINATE'
     CONVALIDATION = 'CONVALIDATION'
     CONTEST = 'CONTEST'
+    RENEWAL = 'RENEWAL'
     ENDDATE = 'ENDDATE'
     REPLACEMENT = 'REPLACEMENT'
 
@@ -34,6 +35,8 @@ class DesignationTypes(Enum):
     EXTENSION = 'EXTENSION'
     PROMOTION = 'PROMOTION'
     REPLACEMENT = 'REPLACEMENT'
+    DISCHARGE = 'DISCHARGE'
+    
 
 class Designation(Base):
 
