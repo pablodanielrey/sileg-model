@@ -38,7 +38,7 @@ try:
                        left join tipo_dedicacion td on (dd.desig_tipodedicacion_id = td.tipodedicacion_id) 
                        left join tipo_caracter tc on (dd.desig_tipocaracter_id = tc.tipocaracter_id) 
                        left join tipo_cargo tcc on (dd.desig_tipocargo_id = tcc.tipocargo_id) where dd.desig_catxmat_id is not null and dd.desig_empleado_id = %s""", (empleado_id,))
-        for p in cur:
+        for p in cur.fetchall():
             functions.append({
                 'dni':dni,
                 'did': p[0],
@@ -61,7 +61,7 @@ try:
             did = f['did']
             f['prorrogas'] = []
             cur.execute('select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id from prorroga where prorroga_prorroga_de_id = %s', (did,))
-            for p in cur:
+            for p in cur.fetchall():
                 f['prorrogas'].append({
                     'desde': p[0],
                     'hasta': p[1],
@@ -80,15 +80,27 @@ try:
                 cur.execute("select m.materia_nombre || ' - ' || c.catedra_nombre  as nombre from catedras_x_materia cm left join materia m on (m.materia_id = cm.catxmat_materia_id) left join catedra c on (cm.catxmat_catedra_id = c.catedra_id) where catxmat_id = %s", (cxmid,))
                 lugar_extension = cur.fetchone()[0]
 
-                f['extensiones'].append({
-                    'eid': p[0],
+                eid = p[0]
+                extension_ = {
+                    'eid': eid,
                     'funcion': transform_name_to_new_model(p[1], f['caracter_original'], f['cargo_original']),
                     'catedra': lugar_extension,
                     'desde': p[3],
                     'hasta': p[4],
-                    'res':p[5]
-                })    
+                    'res':p[5],
+                    'prorrogas': []
+                }
 
+                #cargo la info de las prorrogas de extensión
+                cur.execute('select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id from prorroga where prorroga_prorroga_de_id = %s', (did,))
+                for pe in cur.fetchall():
+                    extension_['prorrogas'].append({
+                        'desde': pe[0],
+                        'hasta': pe[1],
+                        'res': pe[2]
+                    })
+
+                f['extensiones'].append(extension_)
 
 
     finally:
@@ -180,17 +192,18 @@ with open_session() as session:
                 fs = silegModel.get_functions_by_name(session, pp['funcion'])
                 if not fs or len(fs) <= 0:
                     raise Exception(f"No se encuentra la fucion {pp['funcion']}")
-                func = fs[0]
+                funcex = fs[0]
 
                 """ busco el lugar """
                 cs = silegModel.get_places_by_name(session, pp['catedra'])
                 if not cs or len(cs) <= 0:
                     raise Exception(f"No se encuentra el lugar {pp['catedra']}")
-                c = cs[0]
+                cex = cs[0]
 
                 print(f"Generando extension {pp['desde']}")
+                dpeid = str(uuid.uuid4())
                 dp = Designation()
-                dp.id = str(uuid.uuid4())
+                dp.id = dpeid
                 dp.type = DesignationTypes.PROMOTION
                 dp.user_id = uid
                 dp.designation_id = did
@@ -198,10 +211,26 @@ with open_session() as session:
                 dp.start = pp['desde']
                 dp.end = pp['hasta']
                 dp.end_type = DesignationEndTypes.INDETERMINATE
-                dp.function_id = func
-                dp.place_id = c
+                dp.function_id = funcex
+                dp.place_id = cex
                 session.add(dp)
                 session.commit()
+
+                for pe in pp['prorrogas']:
+                    print(f"Generando prorroga {pp['desde']}")
+                    dpe = Designation()
+                    dpe.id = str(uuid.uuid4())
+                    dpe.type = DesignationTypes.EXTENSION
+                    dpe.user_id = uid
+                    dpe.designation_id = dpeid
+                    dpe.res = pp['res']
+                    dpe.start = pp['desde']
+                    dpe.end = pp['hasta']
+                    dpe.end_type = DesignationEndTypes.INDETERMINATE
+                    dpe.function_id = funcex
+                    dpe.place_id = cex
+                    session.add(dpe)
+                    session.commit()                    
 
 
     except Exception as e:
