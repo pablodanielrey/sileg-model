@@ -18,9 +18,9 @@ class PlaceTypes(Enum):
     AREA = 'Area'
     DIVISION = 'División'
     MAESTRIA = 'Maestría'
-    CENTRO = 'Centro',
-    MATERIA = 'Materia',
-    CATEDRA = 'Catedra',
+    CENTRO = 'Centro'
+    MATERIA = 'Materia'
+    CATEDRA = 'Catedra'
     
 
 
