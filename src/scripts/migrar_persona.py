@@ -29,7 +29,7 @@ con = psycopg2.connect(dsn=dsn)
 try:
     cur = con.cursor()
     try:
-        cur.execute('select empleado_id from empleado e left join persona p on (p.pers_id = e.empleado_id) where pers_nrodoc = %s', (dni,))
+        cur.execute('select empleado_id from empleado e left join persona p on (p.pers_id = e.empleado_pers_id) where pers_nrodoc = %s', (dni,))
         empleado_id = cur.fetchone()[0]
 
         """ obtengo las designaciones originales para esa persona en cátedras """
@@ -43,6 +43,8 @@ try:
                 'dni':dni,
                 'did': p[0],
                 'funcion': transform_name_to_new_model(p[1], p[2], p[3]),
+                'caracter_original': p[2],
+                'cargo_original': p[3],
                 'cxm': p[4],
                 'desde': p[5],
                 'hasta': p[6],
@@ -65,6 +67,28 @@ try:
                     'hasta': p[1],
                     'res': p[2]
                 })
+
+            # cargo la info de las extensiones de cada cargo.
+            f['extensiones'] = []
+            cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_catxmat_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, dd.extension_resolucionalta_id from extension dd 
+                        left join tipo_dedicacion td on (dd.extension_nuevadedicacion_id = td.tipodedicacion_id) 
+                        where dd.extension_catxmat_id is not null and dd.extension_designacion_id = %s""", (did,))
+            for p in cur.fetchall():
+                # cargo la info del lugar
+                cxme_ = p[2]
+                cxmid = cxme_
+                cur.execute("select m.materia_nombre || ' - ' || c.catedra_nombre  as nombre from catedras_x_materia cm left join materia m on (m.materia_id = cm.catxmat_materia_id) left join catedra c on (cm.catxmat_catedra_id = c.catedra_id) where catxmat_id = %s", (cxmid,))
+                lugar_extension = cur.fetchone()[0]
+
+                f['extensiones'].append({
+                    'eid': p[0],
+                    'funcion': transform_name_to_new_model(p[1], f['caracter_original'], f['cargo_original']),
+                    'catedra': lugar_extension,
+                    'desde': p[3],
+                    'hasta': p[4],
+                    'res':p[5]
+                })    
+
 
 
     finally:
@@ -148,6 +172,37 @@ with open_session() as session:
                 dp.place_id = c
                 session.add(dp)
                 session.commit()
+
+            """ genero las extensiones y las almaceno dentro del modelo """
+            for pp in p['extensiones']:
+
+                """ busco el cargo """
+                fs = silegModel.get_functions_by_name(session, pp['funcion'])
+                if not fs or len(fs) <= 0:
+                    raise Exception(f"No se encuentra la fucion {pp['funcion']}")
+                func = fs[0]
+
+                """ busco el lugar """
+                cs = silegModel.get_places_by_name(session, pp['catedra'])
+                if not cs or len(cs) <= 0:
+                    raise Exception(f"No se encuentra el lugar {pp['catedra']}")
+                c = cs[0]
+
+                print(f"Generando extension {pp['desde']}")
+                dp = Designation()
+                dp.id = str(uuid.uuid4())
+                dp.type = DesignationTypes.PROMOTION
+                dp.user_id = uid
+                dp.designation_id = did
+                dp.res = pp['res']
+                dp.start = pp['desde']
+                dp.end = pp['hasta']
+                dp.end_type = DesignationEndTypes.INDETERMINATE
+                dp.function_id = func
+                dp.place_id = c
+                session.add(dp)
+                session.commit()
+
 
     except Exception as e:
         raise e
