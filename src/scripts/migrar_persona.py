@@ -35,7 +35,8 @@ try:
         """ obtengo las designaciones originales para esa persona en cátedras """
 
         cur.execute("""select desig_id, tipodedicacion_nombre, tipocaracter_nombre, tipocargo_nombre, dd.desig_catxmat_id, dd.desig_fecha_desde, dd.desig_fecha_hasta, dd.desig_resolucionalta_id,
-                       dd.desig_fecha_baja, dd.desig_resolucionbaja_id from designacion_docente dd 
+                       dd.desig_fecha_baja, dd.desig_resolucionbaja_id, tb.tipobajadesig_nombre from designacion_docente dd 
+                       left join tipo_baja tb on (dd.desig_tipobaja_id = tb.tipobajadesig_id)
                        left join tipo_dedicacion td on (dd.desig_tipodedicacion_id = td.tipodedicacion_id) 
                        left join tipo_caracter tc on (dd.desig_tipocaracter_id = tc.tipocaracter_id) 
                        left join tipo_cargo tcc on (dd.desig_tipocargo_id = tcc.tipocargo_id) where dd.desig_catxmat_id is not null and dd.desig_empleado_id = %s""", (empleado_id,))
@@ -51,7 +52,8 @@ try:
                 'hasta': p[6],
                 'res':p[7],
                 'fecha_baja': p[8],
-                'res_baja': p[9]
+                'res_baja': p[9],
+                'baja_comments': p[10]
             })
             
         for f in functions:
@@ -63,21 +65,27 @@ try:
             #cargo la info de las prorrogas.
             did = f['did']
             f['prorrogas'] = []
-            cur.execute('select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id, prorroga_resolucionbaja_id, prorroga_fecha_baja from prorroga where prorroga_prorroga_de_id = %s', (did,))
+            cur.execute("""select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id, 
+                           prorroga_resolucionbaja_id, prorroga_fecha_baja, tb.tipobajadesig_id 
+                           from prorroga p
+                           left join tipo_baja tb on (p.prorroga_tipobaja_id = tb.tipobajadesig_id)
+                           where prorroga_prorroga_de_id = %s""", (did,))
             for p in cur.fetchall():
                 f['prorrogas'].append({
                     'desde': p[0],
                     'hasta': p[1],
                     'res': p[2],
                     'res_baja': p[3],
-                    'fecha_baja': p[4]
+                    'fecha_baja': p[4],
+                    'baja_comments': p[5]
                 })
 
             # cargo la info de las extensiones de cada cargo.
             f['extensiones'] = []
             cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_catxmat_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, dd.extension_resolucionalta_id,
-                        dd.extension_resolucionbaja_id, dd.extension_fecha_baja
+                        dd.extension_resolucionbaja_id, dd.extension_fecha_baja, tb.tipobajadesig_nombre
                         from extension dd 
+                        left join tipo_baja tb on (dd.extension_tipobaja_id = tb.tipobajadesig_id)
                         left join tipo_dedicacion td on (dd.extension_nuevadedicacion_id = td.tipodedicacion_id) 
                         where dd.extension_catxmat_id is not null and dd.extension_designacion_id = %s""", (did,))
             for p in cur.fetchall():
@@ -97,18 +105,24 @@ try:
                     'res':p[5],
                     'res_baja': p[6],
                     'fecha_baja': p[7],
+                    'baja_comments': p[8],
                     'prorrogas': []
                 }
 
                 #cargo la info de las prorrogas de extensión
-                cur.execute('select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id, prorroga_resolucionbaja_id, prorroga_fecha_baja from prorroga where prorroga_prorroga_de_id = %s', (did,))
+                cur.execute("""select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id, prorroga_resolucionbaja_id, 
+                               prorroga_resolucionbaja_id, prorroga_fecha_baja, tb.tipobajadesig_id 
+                               from prorroga p
+                               left join tipo_baja tb on (p.prorroga_tipobaja_id = tb.tipobajadesig_id)
+                               where prorroga_prorroga_de_id = %s""", (eid,))
                 for pe in cur.fetchall():
                     extension_['prorrogas'].append({
                         'desde': pe[0],
                         'hasta': pe[1],
                         'res': pe[2],
                         'res_baja': p[3],
-                        'fecha_baja': p[4]
+                        'fecha_baja': p[4],
+                        'baja_comments': p[5]
                     })
 
                 f['extensiones'].append(extension_)
@@ -165,9 +179,9 @@ with open_session() as session:
 
             """ genero el cargo y lo guardo en el modelo """
             print(f"Generando cargo {func}")
-            did = str(uuid.uuid4())
+            designacion_id = str(uuid.uuid4())
             d = Designation()
-            d.id = did
+            d.id = designacion_id
             d.type = DesignationTypes.ORIGINAL
             d.res = p['res']
             d.start = p['desde']
@@ -176,39 +190,61 @@ with open_session() as session:
             d.function_id = func
             d.user_id = uid
             d.place_id = c
+            d.historic = True if p['fecha_baja'] else False
             session.add(d)
             session.commit()
 
             """ genero la baja en el caso de que tenga """
             if p['fecha_baja']:
+                print("Generando baja de designacion")
                 db = Designation()
                 db.type = DesignationTypes.DISCHARGE
-                db.designation_id = did
+                db.designation_id = designacion_id
                 db.user_id = uid
                 db.function_id = func
                 db.place_id = c
                 db.start = p['fecha_baja']
                 db.end_type = DesignationEndTypes.INDETERMINATE
                 db.res = p['res_baja']
+                db.comments = p['baja_comments']
                 session.add(db)
                 session.commit()
 
             """ genero las prorrogas y las almaceno dentro del modelo """
             for pp in p['prorrogas']:
                 print(f"Generando prorroga {pp['desde']}")
+                prorroga_id = str(uuid.uuid4())
                 dp = Designation()
-                dp.id = str(uuid.uuid4())
+                dp.id = prorroga_id
                 dp.type = DesignationTypes.EXTENSION
                 dp.user_id = uid
-                dp.designation_id = did
+                dp.designation_id = designacion_id
                 dp.res = pp['res']
                 dp.start = pp['desde']
                 dp.end = pp['hasta']
                 dp.end_type = DesignationEndTypes.INDETERMINATE
                 dp.function_id = func
                 dp.place_id = c
+                dp.historic = True if pp['fecha_baja'] else False
                 session.add(dp)
                 session.commit()
+
+                """ genero la baja de la prorroga en el caso de que tenga """
+                if pp['fecha_baja']:
+                    print("generando baja de prorroga")
+                    db = Designation()
+                    db.type = DesignationTypes.DISCHARGE
+                    db.designation_id = prorroga_id
+                    db.user_id = uid
+                    db.function_id = func
+                    db.place_id = c
+                    db.start = pp['fecha_baja']
+                    db.end_type = DesignationEndTypes.INDETERMINATE
+                    db.res = pp['res_baja']
+                    db.comments = pp['baja_comments']
+                    session.add(db)
+                    session.commit()
+
 
             """ genero las extensiones y las almaceno dentro del modelo """
             for pp in p['extensiones']:
@@ -226,32 +262,35 @@ with open_session() as session:
                 cex = cs[0]
 
                 print(f"Generando extension {pp['desde']}")
-                dpeid = str(uuid.uuid4())
+                extension_id = str(uuid.uuid4())
                 dp = Designation()
-                dp.id = dpeid
+                dp.id = extension_id
                 dp.type = DesignationTypes.PROMOTION
                 dp.user_id = uid
-                dp.designation_id = did
+                dp.designation_id = designacion_id
                 dp.res = pp['res']
                 dp.start = pp['desde']
                 dp.end = pp['hasta']
                 dp.end_type = DesignationEndTypes.INDETERMINATE
                 dp.function_id = funcex
                 dp.place_id = cex
+                dp.historic = True if pp['fecha_baja'] else False
                 session.add(dp)
                 session.commit()
 
                 """ genero las bajas de las extensiones """
                 if pp['fecha_baja']:
+                    print("Generando baja de extension")
                     db = Designation()
                     db.type = DesignationTypes.DISCHARGE
-                    db.designation_id = dpeid
+                    db.designation_id = extension_id
                     db.user_id = uid
                     db.function_id = funcex
                     db.place_id = cex                    
                     db.start = pp['fecha_baja']
                     db.end_type = DesignationEndTypes.INDETERMINATE
                     db.res = pp['res_baja']
+                    db.comments = pp['baja_comments']
                     session.add(db)
                     session.commit()
 
@@ -259,19 +298,37 @@ with open_session() as session:
 
                 for pe in pp['prorrogas']:
                     print(f"Generando prorroga {pp['desde']}")
+                    eprorroga_id = str(uuid.uuid4())
                     dpe = Designation()
-                    dpe.id = str(uuid.uuid4())
+                    dpe.id = eprorroga_id
                     dpe.type = DesignationTypes.EXTENSION
                     dpe.user_id = uid
-                    dpe.designation_id = dpeid
+                    dpe.designation_id = extension_id
                     dpe.res = pp['res']
                     dpe.start = pp['desde']
                     dpe.end = pp['hasta']
                     dpe.end_type = DesignationEndTypes.INDETERMINATE
                     dpe.function_id = funcex
                     dpe.place_id = cex
+                    dpe.historic = True if pe['fecha_baja'] else False
                     session.add(dpe)
                     session.commit()                    
+
+                    """ genero las bajas de las prorrogas de extension """
+                    if pe['fecha_baja']:
+                        print(f"Generando baja de prorroga de extension")
+                        db = Designation()
+                        db.type = DesignationTypes.DISCHARGE
+                        db.designation_id = eprorroga_id
+                        db.user_id = uid
+                        db.function_id = funcex
+                        db.place_id = cex                    
+                        db.start = pe['fecha_baja']
+                        db.end_type = DesignationEndTypes.INDETERMINATE
+                        db.res = pe['res_baja']
+                        db.comments = pe['baja_comments']
+                        session.add(db)
+                        session.commit()
 
 
     except Exception as e:
