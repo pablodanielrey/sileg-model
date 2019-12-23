@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Date, Table, ForeignKey, Boolean, Enum as SQLEnum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from enum import Enum
 
@@ -56,7 +56,6 @@ class Designation(Base):
     #categorias = relationship('CategoriaDesignacion', secondary=categoria_designacion_table, back_populates='designaciones')
 
     designation_id = Column(String, ForeignKey('designations.id'))
-    designations = relationship('Designation', foreign_keys=[designation_id])
 
     user_id = Column(String)
 
@@ -78,6 +77,7 @@ class Designation(Base):
     }
     """
 
+Designation.designations = relationship('Designation', backref=backref('designation', remote_side=[Designation.id]))
 Function.designations = relationship('Designation', back_populates='function')
 Place.designations = relationship('Designation', back_populates='place')
 
