@@ -185,6 +185,8 @@ with open_session() as session:
                 db.type = DesignationTypes.DISCHARGE
                 db.designation_id = did
                 db.user_id = uid
+                db.function_id = func
+                db.place_id = c
                 db.start = p['fecha_baja']
                 db.end_type = DesignationEndTypes.INDETERMINATE
                 db.res = p['res_baja']
@@ -245,6 +247,8 @@ with open_session() as session:
                     db.type = DesignationTypes.DISCHARGE
                     db.designation_id = dpeid
                     db.user_id = uid
+                    db.function_id = funcex
+                    db.place_id = cex                    
                     db.start = pp['fecha_baja']
                     db.end_type = DesignationEndTypes.INDETERMINATE
                     db.res = pp['res_baja']
