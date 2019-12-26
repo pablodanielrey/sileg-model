@@ -36,7 +36,14 @@ class DesignationTypes(Enum):
     PROMOTION = 'PROMOTION'
     REPLACEMENT = 'REPLACEMENT'
     DISCHARGE = 'DISCHARGE'
+
+
+class DesignationStatus(Enum):
+    PENDING = 'PENDING'
+    APROVED = 'APROVED'
+    EFFECTIVE = 'EFFECTIVE'
     
+
 
 class Designation(Base):
 
@@ -51,6 +58,8 @@ class Designation(Base):
     exp = Column(String)
     res = Column(String)
     cor = Column(String)
+
+    status = Column(SQLEnum(DesignationStatus))
 
     type = Column(SQLEnum(DesignationTypes))
     #categorias = relationship('CategoriaDesignacion', secondary=categoria_designacion_table, back_populates='designaciones')
