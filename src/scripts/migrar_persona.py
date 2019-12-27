@@ -5,6 +5,16 @@ import logging
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
+from sileg_model.model import Session
+from sqlalchemy import event
+
+@event.listens_for(Session, 'after_transaction_create')
+def _pts(s, t):
+    print('transacción iniciada')
+
+@event.listens_for(Session, 'after_transaction_end')
+def _pte(s, t):
+    print('transacción finalizada')
 
 def transform_name_to_new_model(d,c,cc):
     func = cc + " - "
@@ -154,7 +164,6 @@ with open_users_session() as s2:
 silegModel = SilegModel()
 with open_session() as session:
     try:
-
         """ elimino todas las designaciones de la persona referenciada """
         desigs = silegModel.get_designations_by_uuid(session, uid)
         ds = silegModel.get_designations(session, desigs)
@@ -192,7 +201,7 @@ with open_session() as session:
             d.place_id = c
             d.historic = True if p['fecha_baja'] else False
             session.add(d)
-            session.commit()
+            #session.commit()
 
             """ genero la baja en el caso de que tenga """
             if p['fecha_baja']:
@@ -208,7 +217,7 @@ with open_session() as session:
                 db.res = p['res_baja']
                 db.comments = p['baja_comments']
                 session.add(db)
-                session.commit()
+                #session.commit()
 
             """ genero las prorrogas y las almaceno dentro del modelo """
             for pp in p['prorrogas']:
@@ -227,7 +236,7 @@ with open_session() as session:
                 dp.place_id = c
                 dp.historic = True if pp['fecha_baja'] else False
                 session.add(dp)
-                session.commit()
+                #session.commit()
 
                 """ genero la baja de la prorroga en el caso de que tenga """
                 if pp['fecha_baja']:
@@ -243,7 +252,7 @@ with open_session() as session:
                     db.res = pp['res_baja']
                     db.comments = pp['baja_comments']
                     session.add(db)
-                    session.commit()
+                    #session.commit()
 
 
             """ genero las extensiones y las almaceno dentro del modelo """
@@ -276,7 +285,7 @@ with open_session() as session:
                 dp.place_id = cex
                 dp.historic = True if pp['fecha_baja'] else False
                 session.add(dp)
-                session.commit()
+                #session.commit()
 
                 """ genero las bajas de las extensiones """
                 if pp['fecha_baja']:
@@ -292,7 +301,7 @@ with open_session() as session:
                     db.res = pp['res_baja']
                     db.comments = pp['baja_comments']
                     session.add(db)
-                    session.commit()
+                    #session.commit()
 
                 """ genero las prorrogas de las extensiones """
 
@@ -312,7 +321,7 @@ with open_session() as session:
                     dpe.place_id = cex
                     dpe.historic = True if pe['fecha_baja'] else False
                     session.add(dpe)
-                    session.commit()                    
+                    #session.commit()                    
 
                     """ genero las bajas de las prorrogas de extension """
                     if pe['fecha_baja']:
@@ -328,7 +337,9 @@ with open_session() as session:
                         db.res = pe['res_baja']
                         db.comments = pe['baja_comments']
                         session.add(db)
-                        session.commit()
+                        #session.commit()
+        
+            session.commit()
 
 
     except Exception as e:
