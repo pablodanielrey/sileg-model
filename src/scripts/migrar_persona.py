@@ -98,9 +98,13 @@ for dni in dnis:
                 #cargo la info de las prorrogas.
                 did = f['did']
                 f['prorrogas'] = []
-                cur.execute("""select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id, 
-                            prorroga_resolucionbaja_id, prorroga_fecha_baja, tb.tipobajadesig_id 
+                cur.execute("""select prorroga_fecha_desde, prorroga_fecha_hasta, 
+                            r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
+                            r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,
+                            prorroga_fecha_baja, tb.tipobajadesig_id 
                             from prorroga p
+                            left join resolucion r on (p.prorroga_resolucionalta_id = r.resolucion_id)
+                            left join resolucion r2 on (p.prorroga_resolucionbaja_id = r2.resolucion_id)
                             left join tipo_baja tb on (p.prorroga_tipobaja_id = tb.tipobajadesig_id)
                             where prorroga_prorroga_de_id = %s""", (did,))
                 for p in cur.fetchall():
@@ -108,16 +112,24 @@ for dni in dnis:
                         'desde': p[0],
                         'hasta': p[1],
                         'res': p[2],
-                        'res_baja': p[3],
-                        'fecha_baja': p[4],
-                        'baja_comments': p[5]
+                        'exp': p[3],
+                        'cor': p[4],
+                        'res_baja': p[5],
+                        'exp_baja': p[6],
+                        'cor_baja': p[7],
+                        'fecha_baja': p[8],
+                        'baja_comments': p[9]
                     })
 
                 # cargo la info de las extensiones de cada cargo.
                 f['extensiones'] = []
-                cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_catxmat_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, dd.extension_resolucionalta_id,
-                            dd.extension_resolucionbaja_id, dd.extension_fecha_baja, tb.tipobajadesig_nombre
+                cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_catxmat_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, 
+                            r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
+                            r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,                            
+                            dd.extension_fecha_baja, tb.tipobajadesig_nombre
                             from extension dd 
+                            left join resolucion r on (dd.extension_resolucionalta_id = r.resolucion_id)
+                            left join resolucion r2 on (dd.extension_resolucionbaja_id = r2.resolucion_id)
                             left join tipo_baja tb on (dd.extension_tipobaja_id = tb.tipobajadesig_id)
                             left join tipo_dedicacion td on (dd.extension_nuevadedicacion_id = td.tipodedicacion_id) 
                             where dd.extension_catxmat_id is not null and dd.extension_designacion_id = %s""", (did,))
@@ -136,28 +148,39 @@ for dni in dnis:
                         'desde': p[3],
                         'hasta': p[4],
                         'res':p[5],
-                        'res_baja': p[6],
-                        'fecha_baja': p[7],
-                        'baja_comments': p[8],
+                        'exp':p[6],
+                        'cor':p[7],
+                        'res_baja': p[8],
+                        'exp_baja': p[9],
+                        'cor_baja': p[10],
+                        'fecha_baja': p[11],
+                        'baja_comments': p[12],
                         'prorrogas': []
                     }
 
                     #cargo la info de las prorrogas de extensión
-                    cur.execute("""select prorroga_fecha_desde, prorroga_fecha_hasta, prorroga_resolucionalta_id, prorroga_resolucionbaja_id, 
-                                prorroga_resolucionbaja_id, prorroga_fecha_baja, tb.tipobajadesig_id 
-                                from prorroga p
-                                left join tipo_baja tb on (p.prorroga_tipobaja_id = tb.tipobajadesig_id)
-                                where prorroga_prorroga_de_id = %s""", (eid,))
-                    for pe in cur.fetchall():
+                    cur.execute("""select prorroga_fecha_desde, prorroga_fecha_hasta, 
+                            r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
+                            r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,
+                            prorroga_fecha_baja, tb.tipobajadesig_id 
+                            from prorroga p
+                            left join resolucion r on (p.prorroga_resolucionalta_id = r.resolucion_id)
+                            left join resolucion r2 on (p.prorroga_resolucionbaja_id = r2.resolucion_id)
+                            left join tipo_baja tb on (p.prorroga_tipobaja_id = tb.tipobajadesig_id)
+                            where prorroga_prorroga_de_id = %s""", (eid,))
+                    for p in cur.fetchall():
                         extension_['prorrogas'].append({
-                            'desde': pe[0],
-                            'hasta': pe[1],
-                            'res': pe[2],
-                            'res_baja': p[3],
-                            'fecha_baja': p[4],
-                            'baja_comments': p[5]
-                        })
-
+                            'desde': p[0],
+                            'hasta': p[1],
+                            'res': p[2],
+                            'exp': p[3],
+                            'cor': p[4],
+                            'res_baja': p[5],
+                            'exp_baja': p[6],
+                            'cor_baja': p[7],
+                            'fecha_baja': p[8],
+                            'baja_comments': p[9]
+                        })                            
                     f['extensiones'].append(extension_)
 
 
