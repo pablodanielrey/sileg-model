@@ -49,7 +49,7 @@ finally:
     con.close()
 
 
-with open('/tmp/miracion-cargos-sileg.csv') as archivo:
+with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
 
     for dni in dnis:
 
