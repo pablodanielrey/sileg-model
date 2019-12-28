@@ -60,8 +60,11 @@ for dni in dnis:
 
             """ obtengo las designaciones originales para esa persona en cátedras """
 
-            cur.execute("""select desig_id, tipodedicacion_nombre, tipocaracter_nombre, tipocargo_nombre, dd.desig_catxmat_id, dd.desig_fecha_desde, dd.desig_fecha_hasta, dd.desig_resolucionalta_id,
-                        dd.desig_fecha_baja, dd.desig_resolucionbaja_id, tb.tipobajadesig_nombre from designacion_docente dd 
+            cur.execute("""select desig_id, tipodedicacion_nombre, tipocaracter_nombre, tipocargo_nombre, dd.desig_catxmat_id, dd.desig_fecha_desde, dd.desig_fecha_hasta, 
+                        r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
+                        dd.desig_fecha_baja, r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde, tb.tipobajadesig_nombre from designacion_docente dd 
+                        left join resolucion r on (dd.desig_resolucionalta_id = r.resolucion_id)
+                        left join resolucion r2 on (dd.desig_resolucionbaja_id = r2.resolucion_id)
                         left join tipo_baja tb on (dd.desig_tipobaja_id = tb.tipobajadesig_id)
                         left join tipo_dedicacion td on (dd.desig_tipodedicacion_id = td.tipodedicacion_id) 
                         left join tipo_caracter tc on (dd.desig_tipocaracter_id = tc.tipocaracter_id) 
@@ -77,9 +80,13 @@ for dni in dnis:
                     'desde': p[5],
                     'hasta': p[6],
                     'res':p[7],
-                    'fecha_baja': p[8],
-                    'res_baja': p[9],
-                    'baja_comments': p[10]
+                    'exp':p[8],
+                    'cor':p[9],
+                    'fecha_baja': p[10],
+                    'res_baja': p[11],
+                    'exp_baja': p[12],
+                    'cor_baja': p[13],
+                    'baja_comments': p[14]
                 })
                 
             for f in functions:
@@ -209,6 +216,8 @@ for dni in dnis:
                 d.id = designacion_id
                 d.type = DesignationTypes.ORIGINAL
                 d.res = p['res']
+                d.exp = p['exp']
+                d.cor = p['cor']
                 d.start = p['desde']
                 d.end = p['hasta']
                 d.end_type = DesignationEndTypes.INDETERMINATE
@@ -231,6 +240,8 @@ for dni in dnis:
                     db.start = p['fecha_baja']
                     db.end_type = DesignationEndTypes.INDETERMINATE
                     db.res = p['res_baja']
+                    db.exp = p['exp_baja']
+                    db.cor = p['cor_baja']
                     db.comments = p['baja_comments']
                     session.add(db)
                     #session.commit()
