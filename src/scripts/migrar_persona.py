@@ -204,7 +204,7 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
         with open_users_session() as s2:
             uid = UsersModel.get_uid_person_number(s2, dni)
             if not uid:
-                archivo.write(f'{dni}; No se encuentra un usuario con ese dni')
+                archivo.write(f'{dni}; No se encuentra un usuario con ese dni\n')
                 raise Exception(f'no se encuentra uid para el dni {dni}')
 
 
@@ -227,13 +227,13 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
 
                     fs = silegModel.get_functions_by_name(session, p['funcion'])
                     if not fs or len(fs) <= 0:
-                        archivo.write(f"{dni};No se encuentra la función;{p['funcion']}")
+                        archivo.write(f"{dni};No se encuentra la función;{p['funcion']}\n")
                         raise Exception(f"No se encuentra la fucion {p['funcion']}")
                     func = fs[0]
 
                     cs = silegModel.get_places_by_name(session, p['catedra'])
                     if not cs or len(cs) <= 0:
-                        archivo.write(f"{dni};No se encuentra la cátedra;{p['catedra']}")
+                        archivo.write(f"{dni};No se encuentra la cátedra;{p['catedra']}\n")
                         raise Exception(f"No se encuentra el lugar {p['catedra']}")
                     c = cs[0]
 
@@ -325,8 +325,8 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                         """ busco el lugar """
                         cs = silegModel.get_places_by_name(session, pp['catedra'])
                         if not cs or len(cs) <= 0:
-                            archivo.write(f"{dni};No se encuentra la cátedra;{pp['catedra']}")
-                            raise Exception(f"No se encuentra el lugar {pp['catedra']}")
+                            archivo.write(f"{dni};No se encuentra la cátedra;{pp['catedra']}\n")
+                            raise Exception(f"No se encuentra el lugar {pp['catedra']}\n")
                         cex = cs[0]
 
                         print(f"Generando extension {pp['desde']}")
@@ -399,8 +399,8 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                                 #session.commit()
                 
                     session.commit()
-                    archivo.write(f"{dni};Usuario migrado exitosamente")
+                    archivo.write(f"{dni};Usuario migrado exitosamente\n")
 
             except Exception as e:
-                archivo.write(f"{dni};{e}")
+                archivo.write(f"{dni};{e}\n")
 
