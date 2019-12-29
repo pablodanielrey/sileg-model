@@ -399,7 +399,7 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                                 #session.commit()
                 
                     session.commit()
-                    archivo.write(f"{dni};Usuario migrado exitosamente\n")
+                    archivo.write(f"{dni};{p['funcion']};{p['catedra']};correctamente migrado\n")
 
             except Exception as e:
                 archivo.write(f"{dni};{e}\n")
