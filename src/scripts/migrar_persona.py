@@ -49,6 +49,175 @@ finally:
     con.close()
 
 
+def cargar_desig_orginales_en_catedras(cur, empleado_id, functions):
+    """ obtengo las designaciones originales para esa persona en cátedras """
+
+    cur.execute("""select desig_id, tipodedicacion_nombre, tipocaracter_nombre, tipocargo_nombre, dd.desig_catxmat_id, dd.desig_fecha_desde, dd.desig_fecha_hasta, 
+                r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
+                dd.desig_fecha_baja, r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde, tb.tipobajadesig_nombre from designacion_docente dd 
+                left join resolucion r on (dd.desig_resolucionalta_id = r.resolucion_id)
+                left join resolucion r2 on (dd.desig_resolucionbaja_id = r2.resolucion_id)
+                left join tipo_baja tb on (dd.desig_tipobaja_id = tb.tipobajadesig_id)
+                left join tipo_dedicacion td on (dd.desig_tipodedicacion_id = td.tipodedicacion_id) 
+                left join tipo_caracter tc on (dd.desig_tipocaracter_id = tc.tipocaracter_id) 
+                left join tipo_cargo tcc on (dd.desig_tipocargo_id = tcc.tipocargo_id) where dd.desig_catxmat_id is not null and dd.desig_empleado_id = %s""", (empleado_id,))
+    for p in cur.fetchall():
+        functions.append({
+            'dni':dni,
+            'did': p[0],
+            'funcion': transform_name_to_new_model(p[1], p[2], p[3]),
+            'caracter_original': p[2],
+            'cargo_original': p[3],
+            'cxm': p[4],
+            'desde': p[5],
+            'hasta': p[6],
+            'res':p[7],
+            'exp':p[8],
+            'cor':p[9],
+            'fecha_baja': p[10],
+            'res_baja': p[11],
+            'exp_baja': p[12],
+            'cor_baja': p[13],
+            'baja_comments': p[14],
+            'lugar_id':None
+        })
+
+def cargar_desig_orginales_en_lugares(cur, empleado_id, functions):
+    """ obtengo las designaciones originales para esa persona en otros lugares """
+
+    cur.execute("""select desig_id, tipodedicacion_nombre, tipocaracter_nombre, tipocargo_nombre, dd.desig_lugdetrab_id, dd.desig_fecha_desde, dd.desig_fecha_hasta, 
+                r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
+                dd.desig_fecha_baja, r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde, tb.tipobajadesig_nombre from designacion_docente dd 
+                left join resolucion r on (dd.desig_resolucionalta_id = r.resolucion_id)
+                left join resolucion r2 on (dd.desig_resolucionbaja_id = r2.resolucion_id)
+                left join tipo_baja tb on (dd.desig_tipobaja_id = tb.tipobajadesig_id)
+                left join tipo_dedicacion td on (dd.desig_tipodedicacion_id = td.tipodedicacion_id) 
+                left join tipo_caracter tc on (dd.desig_tipocaracter_id = tc.tipocaracter_id) 
+                left join tipo_cargo tcc on (dd.desig_tipocargo_id = tcc.tipocargo_id) where dd.desig_lugdetrab_id is not null and dd.desig_empleado_id = %s""", (empleado_id,))
+    for p in cur.fetchall():
+        functions.append({
+            'dni':dni,
+            'did': p[0],
+            'funcion': transform_name_to_new_model(p[1], p[2], p[3]),
+            'caracter_original': p[2],
+            'cargo_original': p[3],
+            'lugar_id': p[4],
+            'desde': p[5],
+            'hasta': p[6],
+            'res':p[7],
+            'exp':p[8],
+            'cor':p[9],
+            'fecha_baja': p[10],
+            'res_baja': p[11],
+            'exp_baja': p[12],
+            'cor_baja': p[13],
+            'baja_comments': p[14],
+            'cxm':None
+        })
+
+def cargar_prorrogas(cur, did, fs):
+    cur.execute("""select prorroga_fecha_desde, prorroga_fecha_hasta, 
+                r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
+                r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,
+                prorroga_fecha_baja, tb.tipobajadesig_id 
+                from prorroga p
+                left join resolucion r on (p.prorroga_resolucionalta_id = r.resolucion_id)
+                left join resolucion r2 on (p.prorroga_resolucionbaja_id = r2.resolucion_id)
+                left join tipo_baja tb on (p.prorroga_tipobaja_id = tb.tipobajadesig_id)
+                where prorroga_prorroga_de_id = %s""", (did,))
+    for p in cur.fetchall():
+        fs.append({
+            'desde': p[0],
+            'hasta': p[1],
+            'res': p[2],
+            'exp': p[3],
+            'cor': p[4],
+            'res_baja': p[5],
+            'exp_baja': p[6],
+            'cor_baja': p[7],
+            'fecha_baja': p[8],
+            'baja_comments': p[9]
+        })
+
+def cargar_extensiones_en_lugares(cur, did, fs):
+    """
+        TODO; falta corregir el codigo!!!
+    """
+    raise Exception('se debe corregir el codigo')
+    cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_lugdetrab_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, 
+                r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
+                r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,                            
+                dd.extension_fecha_baja, tb.tipobajadesig_nombre
+                from extension dd 
+                left join resolucion r on (dd.extension_resolucionalta_id = r.resolucion_id)
+                left join resolucion r2 on (dd.extension_resolucionbaja_id = r2.resolucion_id)
+                left join tipo_baja tb on (dd.extension_tipobaja_id = tb.tipobajadesig_id)
+                left join tipo_dedicacion td on (dd.extension_nuevadedicacion_id = td.tipodedicacion_id) 
+                where dd.extension_catxmat_id is not null and dd.extension_designacion_id = %s""", (did,))
+    for p in cur.fetchall():
+        # cargo la info del lugar
+        cxmid = p[2]
+        cur.execute("select m.materia_nombre || ' - ' || c.catedra_nombre  as nombre from catedras_x_materia cm left join materia m on (m.materia_id = cm.catxmat_materia_id) left join catedra c on (cm.catxmat_catedra_id = c.catedra_id) where catxmat_id = %s", (cxmid,))
+        lugar_extension = cur.fetchone()[0]
+
+        eid = p[0]
+        extension_ = {
+            'eid': eid,
+            'funcion': transform_name_to_new_model(p[1], f['caracter_original'], f['cargo_original']),
+            'catedra': lugar_extension,
+            'desde': p[3],
+            'hasta': p[4],
+            'res':p[5],
+            'exp':p[6],
+            'cor':p[7],
+            'res_baja': p[8],
+            'exp_baja': p[9],
+            'cor_baja': p[10],
+            'fecha_baja': p[11],
+            'baja_comments': p[12],
+            'prorrogas': []
+        }
+        fs.append(extension_)
+
+
+def cargar_extensiones_en_catedras(cur, did, fs):
+    cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_catxmat_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, 
+                r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
+                r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,                            
+                dd.extension_fecha_baja, tb.tipobajadesig_nombre
+                from extension dd 
+                left join resolucion r on (dd.extension_resolucionalta_id = r.resolucion_id)
+                left join resolucion r2 on (dd.extension_resolucionbaja_id = r2.resolucion_id)
+                left join tipo_baja tb on (dd.extension_tipobaja_id = tb.tipobajadesig_id)
+                left join tipo_dedicacion td on (dd.extension_nuevadedicacion_id = td.tipodedicacion_id) 
+                where dd.extension_catxmat_id is not null and dd.extension_designacion_id = %s""", (did,))
+    for p in cur.fetchall():
+        # cargo la info del lugar
+        cxmid = p[2]
+        cur.execute("select m.materia_nombre || ' - ' || c.catedra_nombre  as nombre from catedras_x_materia cm left join materia m on (m.materia_id = cm.catxmat_materia_id) left join catedra c on (cm.catxmat_catedra_id = c.catedra_id) where catxmat_id = %s", (cxmid,))
+        lugar_extension = cur.fetchone()[0]
+
+        eid = p[0]
+        extension_ = {
+            'eid': eid,
+            'funcion': transform_name_to_new_model(p[1], f['caracter_original'], f['cargo_original']),
+            'catedra': lugar_extension,
+            'desde': p[3],
+            'hasta': p[4],
+            'res':p[5],
+            'exp':p[6],
+            'cor':p[7],
+            'res_baja': p[8],
+            'exp_baja': p[9],
+            'cor_baja': p[10],
+            'fecha_baja': p[11],
+            'baja_comments': p[12],
+            'prorrogas': []
+        }
+        fs.append(extension_)
+
+
+
 with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
 
     for dni in dnis:
@@ -60,130 +229,32 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                 cur.execute('select empleado_id from empleado e left join persona p on (p.pers_id = e.empleado_pers_id) where pers_nrodoc = %s', (dni,))
                 empleado_id = cur.fetchone()[0]
 
-                """ obtengo las designaciones originales para esa persona en cátedras """
-
-                cur.execute("""select desig_id, tipodedicacion_nombre, tipocaracter_nombre, tipocargo_nombre, dd.desig_catxmat_id, dd.desig_fecha_desde, dd.desig_fecha_hasta, 
-                            r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
-                            dd.desig_fecha_baja, r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde, tb.tipobajadesig_nombre from designacion_docente dd 
-                            left join resolucion r on (dd.desig_resolucionalta_id = r.resolucion_id)
-                            left join resolucion r2 on (dd.desig_resolucionbaja_id = r2.resolucion_id)
-                            left join tipo_baja tb on (dd.desig_tipobaja_id = tb.tipobajadesig_id)
-                            left join tipo_dedicacion td on (dd.desig_tipodedicacion_id = td.tipodedicacion_id) 
-                            left join tipo_caracter tc on (dd.desig_tipocaracter_id = tc.tipocaracter_id) 
-                            left join tipo_cargo tcc on (dd.desig_tipocargo_id = tcc.tipocargo_id) where dd.desig_catxmat_id is not null and dd.desig_empleado_id = %s""", (empleado_id,))
-                for p in cur.fetchall():
-                    functions.append({
-                        'dni':dni,
-                        'did': p[0],
-                        'funcion': transform_name_to_new_model(p[1], p[2], p[3]),
-                        'caracter_original': p[2],
-                        'cargo_original': p[3],
-                        'cxm': p[4],
-                        'desde': p[5],
-                        'hasta': p[6],
-                        'res':p[7],
-                        'exp':p[8],
-                        'cor':p[9],
-                        'fecha_baja': p[10],
-                        'res_baja': p[11],
-                        'exp_baja': p[12],
-                        'cor_baja': p[13],
-                        'baja_comments': p[14]
-                    })
-                    
+                cargar_desig_orginales_en_catedras(cur, empleado_id, functions)
+                cargar_desig_orginales_en_lugares(cur, empleado_id, functions)
+                
                 for f in functions:
                     # cargo la info del lugar
-                    cxmid = f['cxm']
-                    cur.execute("select m.materia_nombre || ' - ' || c.catedra_nombre  as nombre from catedras_x_materia cm left join materia m on (m.materia_id = cm.catxmat_materia_id) left join catedra c on (cm.catxmat_catedra_id = c.catedra_id) where catxmat_id = %s", (cxmid,))
-                    f['catedra'] = cur.fetchone()[0]
+                    if f['cxm']:
+                        cxmid = f['cxm']
+                        cur.execute("select m.materia_nombre || ' - ' || c.catedra_nombre  as nombre from catedras_x_materia cm left join materia m on (m.materia_id = cm.catxmat_materia_id) left join catedra c on (cm.catxmat_catedra_id = c.catedra_id) where catxmat_id = %s", (cxmid,))
+                        f['catedra'] = cur.fetchone()[0]
+                    else:
+                        lid = f['lugar_id']
+                        cur.execute("select lugdetrab_nombre from lugar_de_trabajo where lugdetrab_id = %s", (lid,))
+                        f['lugar'] = cur.fetchone()[0]
 
                     #cargo la info de las prorrogas.
                     did = f['did']
                     f['prorrogas'] = []
-                    cur.execute("""select prorroga_fecha_desde, prorroga_fecha_hasta, 
-                                r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
-                                r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,
-                                prorroga_fecha_baja, tb.tipobajadesig_id 
-                                from prorroga p
-                                left join resolucion r on (p.prorroga_resolucionalta_id = r.resolucion_id)
-                                left join resolucion r2 on (p.prorroga_resolucionbaja_id = r2.resolucion_id)
-                                left join tipo_baja tb on (p.prorroga_tipobaja_id = tb.tipobajadesig_id)
-                                where prorroga_prorroga_de_id = %s""", (did,))
-                    for p in cur.fetchall():
-                        f['prorrogas'].append({
-                            'desde': p[0],
-                            'hasta': p[1],
-                            'res': p[2],
-                            'exp': p[3],
-                            'cor': p[4],
-                            'res_baja': p[5],
-                            'exp_baja': p[6],
-                            'cor_baja': p[7],
-                            'fecha_baja': p[8],
-                            'baja_comments': p[9]
-                        })
+                    cargar_prorrogas(cur, did, f['prorrogas'])
 
                     # cargo la info de las extensiones de cada cargo.
                     f['extensiones'] = []
-                    cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_catxmat_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, 
-                                r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
-                                r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,                            
-                                dd.extension_fecha_baja, tb.tipobajadesig_nombre
-                                from extension dd 
-                                left join resolucion r on (dd.extension_resolucionalta_id = r.resolucion_id)
-                                left join resolucion r2 on (dd.extension_resolucionbaja_id = r2.resolucion_id)
-                                left join tipo_baja tb on (dd.extension_tipobaja_id = tb.tipobajadesig_id)
-                                left join tipo_dedicacion td on (dd.extension_nuevadedicacion_id = td.tipodedicacion_id) 
-                                where dd.extension_catxmat_id is not null and dd.extension_designacion_id = %s""", (did,))
-                    for p in cur.fetchall():
-                        # cargo la info del lugar
-                        cxme_ = p[2]
-                        cxmid = cxme_
-                        cur.execute("select m.materia_nombre || ' - ' || c.catedra_nombre  as nombre from catedras_x_materia cm left join materia m on (m.materia_id = cm.catxmat_materia_id) left join catedra c on (cm.catxmat_catedra_id = c.catedra_id) where catxmat_id = %s", (cxmid,))
-                        lugar_extension = cur.fetchone()[0]
-
-                        eid = p[0]
-                        extension_ = {
-                            'eid': eid,
-                            'funcion': transform_name_to_new_model(p[1], f['caracter_original'], f['cargo_original']),
-                            'catedra': lugar_extension,
-                            'desde': p[3],
-                            'hasta': p[4],
-                            'res':p[5],
-                            'exp':p[6],
-                            'cor':p[7],
-                            'res_baja': p[8],
-                            'exp_baja': p[9],
-                            'cor_baja': p[10],
-                            'fecha_baja': p[11],
-                            'baja_comments': p[12],
-                            'prorrogas': []
-                        }
-
+                    cargar_extensiones_en_catedras(cur, did, f['extensiones'])
+                    for e in f['extensiones']:
                         #cargo la info de las prorrogas de extensión
-                        cur.execute("""select prorroga_fecha_desde, prorroga_fecha_hasta, 
-                                r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
-                                r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,
-                                prorroga_fecha_baja, tb.tipobajadesig_id 
-                                from prorroga p
-                                left join resolucion r on (p.prorroga_resolucionalta_id = r.resolucion_id)
-                                left join resolucion r2 on (p.prorroga_resolucionbaja_id = r2.resolucion_id)
-                                left join tipo_baja tb on (p.prorroga_tipobaja_id = tb.tipobajadesig_id)
-                                where prorroga_prorroga_de_id = %s""", (eid,))
-                        for p in cur.fetchall():
-                            extension_['prorrogas'].append({
-                                'desde': p[0],
-                                'hasta': p[1],
-                                'res': p[2],
-                                'exp': p[3],
-                                'cor': p[4],
-                                'res_baja': p[5],
-                                'exp_baja': p[6],
-                                'cor_baja': p[7],
-                                'fecha_baja': p[8],
-                                'baja_comments': p[9]
-                            })                            
-                        f['extensiones'].append(extension_)
+                        eid = e['eid']
+                        cargar_prorrogas(cur, eid, e['prorrogas'])
 
 
             finally:
