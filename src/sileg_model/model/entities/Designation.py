@@ -1,3 +1,16 @@
+"""
+    Tipos de designaciones:
+        ORIGINAL = cargo de planta docente principal
+        EXTENSION = extensión del período - es una PRORROGA de una designación ORIGINAL
+        PROMOTION = extensión del cargo - es una EXTENSION de una designación ORIGINAL
+        REPLACEMENT = suplencia de una designación
+        DISCHARGE = baja de una designación
+        FUNCTION = formalmente cumplimiento de funciones
+        RELATED_FUNCTION = informalmente marca el cumplimiento de una función asociada a un cargo (reemplaza a las anotaciones)
+
+"""
+
+
 from sqlalchemy import Column, String, Date, Table, ForeignKey, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import relationship, backref
 
@@ -30,18 +43,22 @@ class DesignationEndTypes(Enum):
     ENDDATE = 'ENDDATE'
     REPLACEMENT = 'REPLACEMENT'
 
+
 class DesignationTypes(Enum):
     ORIGINAL = 'ORIGINAL'
     EXTENSION = 'EXTENSION'
     PROMOTION = 'PROMOTION'
     REPLACEMENT = 'REPLACEMENT'
     DISCHARGE = 'DISCHARGE'
+    RELATED_FUNCTION = 'RELATED_FUNCTION'
+    FUNCTION = 'FUNCTION'
 
 
 class DesignationStatus(Enum):
     PENDING = 'PENDING'
     APROVED = 'APROVED'
     EFFECTIVE = 'EFFECTIVE'
+    IMPORTED = 'IMPORTED'
     
 
 

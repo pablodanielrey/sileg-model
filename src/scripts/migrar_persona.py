@@ -8,6 +8,16 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 from sileg_model.model import Session
 from sqlalchemy import event
 
+from sileg_model.model.entities.Function import Function, FunctionTypes
+from sileg_model.model.entities.Designation import DesignationEndTypes, DesignationTypes, DesignationStatus, Designation
+from sileg_model.model import open_session
+from sileg_model.model.SilegModel import SilegModel
+from users.model import open_session as open_users_session
+from users.model.UsersModel import UsersModel
+
+import uuid
+
+
 @event.listens_for(Session, 'after_transaction_create')
 def _pts(s, t):
     print('transacción iniciada')
@@ -48,19 +58,32 @@ try:
 finally:
     con.close()
 
+def cargar_lugares_y_catedras(cur, functions):
+    """ carga dentro del cargo, la catedra y lugar de trbaajo asociados """
+    for f in functions:
+        if f['cxm']:
+            cxmid = f['cxm']
+            cur.execute("select m.materia_nombre || ' - ' || c.catedra_nombre  as nombre from catedras_x_materia cm left join materia m on (m.materia_id = cm.catxmat_materia_id) left join catedra c on (cm.catxmat_catedra_id = c.catedra_id) where catxmat_id = %s", (cxmid,))
+            f['catedra'] = cur.fetchone()[0]
+        if f['lugar_id']:
+            lid = f['lugar_id']
+            cur.execute("select lugdetrab_nombre from lugar_de_trabajo where lugdetrab_id = %s", (lid,))
+            f['lugar'] = cur.fetchone()[0]
 
-def cargar_desig_orginales_en_catedras(cur, empleado_id, functions):
+def cargar_desig_orginales(cur, empleado_id, functions):
     """ obtengo las designaciones originales para esa persona en cátedras """
 
     cur.execute("""select desig_id, tipodedicacion_nombre, tipocaracter_nombre, tipocargo_nombre, dd.desig_catxmat_id, dd.desig_fecha_desde, dd.desig_fecha_hasta, 
                 r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
-                dd.desig_fecha_baja, r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde, tb.tipobajadesig_nombre from designacion_docente dd 
+                dd.desig_fecha_baja, r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde, tb.tipobajadesig_nombre,
+                dd.desig_lugdetrab_id 
+                from designacion_docente dd 
                 left join resolucion r on (dd.desig_resolucionalta_id = r.resolucion_id)
                 left join resolucion r2 on (dd.desig_resolucionbaja_id = r2.resolucion_id)
                 left join tipo_baja tb on (dd.desig_tipobaja_id = tb.tipobajadesig_id)
                 left join tipo_dedicacion td on (dd.desig_tipodedicacion_id = td.tipodedicacion_id) 
                 left join tipo_caracter tc on (dd.desig_tipocaracter_id = tc.tipocaracter_id) 
-                left join tipo_cargo tcc on (dd.desig_tipocargo_id = tcc.tipocargo_id) where dd.desig_catxmat_id is not null and dd.desig_empleado_id = %s""", (empleado_id,))
+                left join tipo_cargo tcc on (dd.desig_tipocargo_id = tcc.tipocargo_id) where dd.desig_empleado_id = %s""", (empleado_id,))
     for p in cur.fetchall():
         functions.append({
             'dni':dni,
@@ -79,40 +102,7 @@ def cargar_desig_orginales_en_catedras(cur, empleado_id, functions):
             'exp_baja': p[12],
             'cor_baja': p[13],
             'baja_comments': p[14],
-            'lugar_id':None
-        })
-
-def cargar_desig_orginales_en_lugares(cur, empleado_id, functions):
-    """ obtengo las designaciones originales para esa persona en otros lugares """
-
-    cur.execute("""select desig_id, tipodedicacion_nombre, tipocaracter_nombre, tipocargo_nombre, dd.desig_lugdetrab_id, dd.desig_fecha_desde, dd.desig_fecha_hasta, 
-                r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
-                dd.desig_fecha_baja, r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde, tb.tipobajadesig_nombre from designacion_docente dd 
-                left join resolucion r on (dd.desig_resolucionalta_id = r.resolucion_id)
-                left join resolucion r2 on (dd.desig_resolucionbaja_id = r2.resolucion_id)
-                left join tipo_baja tb on (dd.desig_tipobaja_id = tb.tipobajadesig_id)
-                left join tipo_dedicacion td on (dd.desig_tipodedicacion_id = td.tipodedicacion_id) 
-                left join tipo_caracter tc on (dd.desig_tipocaracter_id = tc.tipocaracter_id) 
-                left join tipo_cargo tcc on (dd.desig_tipocargo_id = tcc.tipocargo_id) where dd.desig_lugdetrab_id is not null and dd.desig_empleado_id = %s""", (empleado_id,))
-    for p in cur.fetchall():
-        functions.append({
-            'dni':dni,
-            'did': p[0],
-            'funcion': transform_name_to_new_model(p[1], p[2], p[3]),
-            'caracter_original': p[2],
-            'cargo_original': p[3],
-            'lugar_id': p[4],
-            'desde': p[5],
-            'hasta': p[6],
-            'res':p[7],
-            'exp':p[8],
-            'cor':p[9],
-            'fecha_baja': p[10],
-            'res_baja': p[11],
-            'exp_baja': p[12],
-            'cor_baja': p[13],
-            'baja_comments': p[14],
-            'cxm':None
+            'lugar_id':p[15]
         })
 
 def cargar_prorrogas(cur, did, fs):
@@ -139,52 +129,12 @@ def cargar_prorrogas(cur, did, fs):
             'baja_comments': p[9]
         })
 
-def cargar_extensiones_en_lugares(cur, did, fs):
-    """
-        TODO; falta corregir el codigo!!!
-    """
-    raise Exception('se debe corregir el codigo')
-    cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_lugdetrab_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, 
-                r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
-                r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,                            
-                dd.extension_fecha_baja, tb.tipobajadesig_nombre
-                from extension dd 
-                left join resolucion r on (dd.extension_resolucionalta_id = r.resolucion_id)
-                left join resolucion r2 on (dd.extension_resolucionbaja_id = r2.resolucion_id)
-                left join tipo_baja tb on (dd.extension_tipobaja_id = tb.tipobajadesig_id)
-                left join tipo_dedicacion td on (dd.extension_nuevadedicacion_id = td.tipodedicacion_id) 
-                where dd.extension_catxmat_id is not null and dd.extension_designacion_id = %s""", (did,))
-    for p in cur.fetchall():
-        # cargo la info del lugar
-        cxmid = p[2]
-        cur.execute("select m.materia_nombre || ' - ' || c.catedra_nombre  as nombre from catedras_x_materia cm left join materia m on (m.materia_id = cm.catxmat_materia_id) left join catedra c on (cm.catxmat_catedra_id = c.catedra_id) where catxmat_id = %s", (cxmid,))
-        lugar_extension = cur.fetchone()[0]
-
-        eid = p[0]
-        extension_ = {
-            'eid': eid,
-            'funcion': transform_name_to_new_model(p[1], f['caracter_original'], f['cargo_original']),
-            'catedra': lugar_extension,
-            'desde': p[3],
-            'hasta': p[4],
-            'res':p[5],
-            'exp':p[6],
-            'cor':p[7],
-            'res_baja': p[8],
-            'exp_baja': p[9],
-            'cor_baja': p[10],
-            'fecha_baja': p[11],
-            'baja_comments': p[12],
-            'prorrogas': []
-        }
-        fs.append(extension_)
-
-
-def cargar_extensiones_en_catedras(cur, did, fs):
+def cargar_extensiones(cur, did, fs):
     cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_catxmat_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, 
                 r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
                 r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,                            
-                dd.extension_fecha_baja, tb.tipobajadesig_nombre
+                dd.extension_fecha_baja, tb.tipobajadesig_nombre,
+                dd.extension_lugdetrab_id 
                 from extension dd 
                 left join resolucion r on (dd.extension_resolucionalta_id = r.resolucion_id)
                 left join resolucion r2 on (dd.extension_resolucionbaja_id = r2.resolucion_id)
@@ -192,16 +142,11 @@ def cargar_extensiones_en_catedras(cur, did, fs):
                 left join tipo_dedicacion td on (dd.extension_nuevadedicacion_id = td.tipodedicacion_id) 
                 where dd.extension_catxmat_id is not null and dd.extension_designacion_id = %s""", (did,))
     for p in cur.fetchall():
-        # cargo la info del lugar
-        cxmid = p[2]
-        cur.execute("select m.materia_nombre || ' - ' || c.catedra_nombre  as nombre from catedras_x_materia cm left join materia m on (m.materia_id = cm.catxmat_materia_id) left join catedra c on (cm.catxmat_catedra_id = c.catedra_id) where catxmat_id = %s", (cxmid,))
-        lugar_extension = cur.fetchone()[0]
-
         eid = p[0]
         extension_ = {
             'eid': eid,
             'funcion': transform_name_to_new_model(p[1], f['caracter_original'], f['cargo_original']),
-            'catedra': lugar_extension,
+            'cxm': p[2],
             'desde': p[3],
             'hasta': p[4],
             'res':p[5],
@@ -212,16 +157,39 @@ def cargar_extensiones_en_catedras(cur, did, fs):
             'cor_baja': p[10],
             'fecha_baja': p[11],
             'baja_comments': p[12],
+            'lugar_id': p[13],
             'prorrogas': []
         }
         fs.append(extension_)
 
+
+def generar_cargo_original(cur, uid, fid, desig):
+    raise Exception('falta terminar')
+    """ genero el cargo y lo guardo en el modelo """
+    designacion_id = str(uuid.uuid4())
+    d = Designation()
+    d.id = designacion_id
+    d.function_id = fid
+    d.user_id = uid
+    d.type = DesignationTypes.ORIGINAL
+    d.status = DesignationStatus.IMPORTED
+    d.res = desig['res']
+    d.exp = desig['exp']
+    d.cor = desig['cor']
+    d.start = desig['desde']
+    d.end = desig['hasta']
+    d.end_type = DesignationEndTypes.INDETERMINATE
+    d.place_id = c
+    d.historic = True if p['fecha_baja'] else False
+    session.add(d)
+
+def generar_prorrogas(cur, uid, did, prorrogas):
+    raise Exception('falta terminar')
 
 
 with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
 
     for dni in dnis:
-
         con = psycopg2.connect(dsn=dsn)
         try:
             cur = con.cursor()
@@ -229,20 +197,10 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                 cur.execute('select empleado_id from empleado e left join persona p on (p.pers_id = e.empleado_pers_id) where pers_nrodoc = %s', (dni,))
                 empleado_id = cur.fetchone()[0]
 
-                cargar_desig_orginales_en_catedras(cur, empleado_id, functions)
-                cargar_desig_orginales_en_lugares(cur, empleado_id, functions)
+                cargar_desig_orginales(cur, empleado_id, functions)
+                cargar_lugares_y_catedras(cur, functions)
                 
                 for f in functions:
-                    # cargo la info del lugar
-                    if f['cxm']:
-                        cxmid = f['cxm']
-                        cur.execute("select m.materia_nombre || ' - ' || c.catedra_nombre  as nombre from catedras_x_materia cm left join materia m on (m.materia_id = cm.catxmat_materia_id) left join catedra c on (cm.catxmat_catedra_id = c.catedra_id) where catxmat_id = %s", (cxmid,))
-                        f['catedra'] = cur.fetchone()[0]
-                    else:
-                        lid = f['lugar_id']
-                        cur.execute("select lugdetrab_nombre from lugar_de_trabajo where lugdetrab_id = %s", (lid,))
-                        f['lugar'] = cur.fetchone()[0]
-
                     #cargo la info de las prorrogas.
                     did = f['did']
                     f['prorrogas'] = []
@@ -250,12 +208,12 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
 
                     # cargo la info de las extensiones de cada cargo.
                     f['extensiones'] = []
-                    cargar_extensiones_en_catedras(cur, did, f['extensiones'])
+                    cargar_extensiones(cur, did, f['extensiones'])
+                    cargar_lugares_y_catedras(cur, f['extensiones'])
                     for e in f['extensiones']:
                         #cargo la info de las prorrogas de extensión
                         eid = e['eid']
                         cargar_prorrogas(cur, eid, e['prorrogas'])
-
 
             finally:
                 cur.close()
@@ -263,14 +221,6 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
             con.close()
 
 
-        from sileg_model.model.entities.Function import Function, FunctionTypes
-        from sileg_model.model.entities.Designation import DesignationEndTypes, DesignationTypes, Designation
-        from sileg_model.model import open_session
-        from sileg_model.model.SilegModel import SilegModel
-        from users.model import open_session as open_users_session
-        from users.model.UsersModel import UsersModel
-
-        import uuid
 
         with open_users_session() as s2:
             uid = UsersModel.get_uid_person_number(s2, dni)
@@ -302,13 +252,25 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                         raise Exception(f"No se encuentra la fucion {p['funcion']}")
                     func = fs[0]
 
-                    cs = silegModel.get_places_by_name(session, p['catedra'])
-                    if not cs or len(cs) <= 0:
-                        archivo.write(f"{dni};No se encuentra la cátedra;{p['catedra']}\n")
-                        raise Exception(f"No se encuentra el lugar {p['catedra']}")
-                    c = cs[0]
+                    c = None
+                    if p['catedra']:
+                        cs = silegModel.get_places_by_name(session, p['catedra'])
+                        if not cs or len(cs) <= 0:
+                            archivo.write(f"{dni};No se encuentra la cátedra;{p['catedra']}\n")
+                            raise Exception(f"No se encuentra el lugar {p['catedra']}")
+                        c = cs[0]
+                    
+                    if p['lugar']:
+                        cs = silegModel.get_places_by_name(session, p['lugar'])
+                        if not cs or len(cs) <= 0:
+                            archivo.write(f"{dni};No se encuentra el lugar;{p['lugar']}\n")
+                            raise Exception(f"No se encuentra el lugar {p['lugar']}")
+                        c = cs[0]
 
-                    print(f"usuario {uid} funcion {func} catedra {c}")
+                    if not c:
+                        raise Exception(f'No se encuentra lugar de trabajo para {uid} {dni}')
+
+                    print(f"usuario {uid} funcion {func} lugar {c}")
 
                     """ genero el cargo y lo guardo en el modelo """
                     print(f"Generando cargo {func}")
@@ -474,4 +436,3 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
 
             except Exception as e:
                 archivo.write(f"{dni};{e}\n")
-
