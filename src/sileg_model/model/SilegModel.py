@@ -24,8 +24,11 @@ class SilegModel:
         return session.query(Designation).filter(Designation.id.in_(dids)).all()
 
     def get_designations_by_uuid(self, session, uid):
+        """ TODO: ver con los chicos que uid debe ser una lista """
         return [d.id for d in session.query(Designation.id).filter(Designation.user_id == uid).all()]
 
+    def get_designations_by_places(self, session, pids=[]):
+        return [d.id for d in session.query(Designation.id).filter(Designation.place_id in pids).all()]
 
     def get_places(self, session, pids=[]):
         return session.query(Place).filter(Place.id.in_(pids)).all()
