@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Numeric, ForeignKey, DateTime, Enum as SQLEnum
+from sqlalchemy import Column, String, Numeric, ForeignKey, DateTime, Enum as SQLEnum, Integer
 from sqlalchemy.orm import relationship
 
 from enum import Enum
@@ -19,7 +19,7 @@ class Function(Base):
     name = Column(String)
     type = Column(SQLEnum(FunctionTypes))
     description = Column(String)
-
+    level = Column(Integer)
 
     """
     __mapper_args__ = {
