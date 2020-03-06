@@ -28,7 +28,7 @@ class SilegModel:
         return [d.id for d in session.query(Designation.id).filter(Designation.user_id == uid).all()]
 
     def get_designations_by_places(self, session, pids=[]):
-        return [d.id for d in session.query(Designation.id).filter(Designation.place_id in pids).all()]
+        return [d.id for d in session.query(Designation.id).filter(Designation.place_id.in_(pids)).all()]
 
     def get_places(self, session, pids=[]):
         return session.query(Place).filter(Place.id.in_(pids)).all()
