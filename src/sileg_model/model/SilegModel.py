@@ -6,6 +6,12 @@ from .entities.LeaveLicense import PersonalLeaveLicense, DesignationLeaveLicense
 
 class SilegModel:
 
+    def get_external_seniority_by_user(self, session, uid):
+        return [es.id for es in session.query(ExternalSeniority.id).filter(ExternalSeniority.user_id == uid).all()]
+
+    def get_external_seniority(self, session, ids=[]):
+        session.query(ExternalSeniority).filter(ExternalSeniority.id.in_(ids)).all()
+
     def get_designation_end_types(self):
         return [d.value for d in DesignationEndTypes]
 
