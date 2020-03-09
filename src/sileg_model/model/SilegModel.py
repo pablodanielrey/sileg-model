@@ -25,15 +25,25 @@ class SilegModel:
     def get_functions_by_name(self, session, name):
         return [f.id for f in session.query(Function.id).filter(Function.name == name).all()]
 
+    def get_designations(self, session, dids=[], historic=False, deleted=False):
+        query = session.query(Designation)
+        if not historic:
+            query = query.filter(Designation.historic == False)
+        else:
+            query = query.filter(Designation.historic == True)
 
-    def get_designations(self, session, dids=[]):
-        return session.query(Designation).filter(Designation.id.in_(dids)).all()
+        if not deleted:
+            query = query.filter(Designation.deleted == None)
+        else:
+            query = query.filter(Designation.deleted != None)
+
+        return query.filter(Designation.id.in_(dids)).all()
 
     def get_designations_by_uuid(self, session, uid):
         """ TODO: ver con los chicos que uid debe ser una lista """
         return [d.id for d in session.query(Designation.id).filter(Designation.user_id == uid).all()]
 
-    def get_designations_by_places(self, session, pids=[]):
+    def get_designations_by_places(self, session, pids=[], historic=False, deleted=False):
         return [d.id for d in session.query(Designation.id).filter(Designation.place_id.in_(pids)).all()]
 
     def get_places(self, session, pids=[]):
