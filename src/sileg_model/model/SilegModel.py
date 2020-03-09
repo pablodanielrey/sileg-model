@@ -1,4 +1,5 @@
 
+from sqlalchemy import or_
 from .entities.Function import Function, FunctionTypes
 from .entities.Designation import Designation, DesignationEndTypes
 from .entities.Place import PlaceTypes, Place
@@ -58,6 +59,22 @@ class SilegModel:
     def get_places_by_name(self, session, name):
         return [p.id for p in session.query(Place.id).filter(Place.name == name).all()]
 
+    def search_place(self, session, query):
+        """
+            retorna los uids que corresponden con la consulta de query
+        """
+        if not query:
+            return []
+        q = session.query(Place.id)
+        q = q.filter(or_(\
+            Place.name.op('~*')(query),\
+            Place.type.op('~*')(query),\
+            Place.description.op('~*')(query),\
+            Place.number.op('~*')(query),\
+            Place.telephone.op('~*')(query),\
+            Place.email.op('~*')(query),\
+        ))
+        return q.all()
 
     def get_user_licenses(self, session, uid):
         return [l.id for l in session.query(PersonalLeaveLicense.id).filter(PersonalLeaveLicense.user_id == uid).all()]
