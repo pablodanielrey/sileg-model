@@ -3,6 +3,7 @@ from .entities.Function import Function, FunctionTypes
 from .entities.Designation import Designation, DesignationEndTypes
 from .entities.Place import PlaceTypes, Place
 from .entities.LeaveLicense import PersonalLeaveLicense, DesignationLeaveLicense
+from .entities.ExternalSeniority import ExternalSeniority
 
 class SilegModel:
 
