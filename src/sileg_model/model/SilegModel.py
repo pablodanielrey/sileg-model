@@ -27,10 +27,12 @@ class SilegModel:
 
     def get_designations(self, session, dids=[], historic=False, deleted=False):
         query = session.query(Designation)
+        """
         if not historic:
             query = query.filter(Designation.historic == False)
         else:
             query = query.filter(Designation.historic == True)
+        """
 
         if not deleted:
             query = query.filter(Designation.deleted == None)
