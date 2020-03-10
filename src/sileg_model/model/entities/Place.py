@@ -6,21 +6,21 @@ from enum import Enum
 from . import Base
 
 class PlaceTypes(Enum):
-    UNIVERSIDAD = 'Universidad'
-    FACULTAD = 'Facultad'
-    SECRETARIA = 'Secretaría'
-    PROSECRETARIA = 'Pro-Secretaría'
-    DEPARTAMENTO = 'Departamento'
-    DIRECCION = 'Dirección'
-    INSTITUTO = 'Instituto'
-    ESCUELA = 'Escuela'
-    SEMINRARIO = 'Seminario'
-    AREA = 'Area'
-    DIVISION = 'División'
-    MAESTRIA = 'Maestría'
-    CENTRO = 'Centro'
-    MATERIA = 'Materia'
-    CATEDRA = 'Catedra'
+    UNIVERSIDAD = 'UNIVERSIDAD'
+    FACULTAD = 'FACULTAD'
+    SECRETARIA = 'SECRETARIA'
+    PROSECRETARIA = 'PROSECRETARIA'
+    DEPARTAMENTO = 'DEPARTAMENTO'
+    DIRECCION = 'DIRECCION'
+    INSTITUTO = 'INSTITUTO'
+    ESCUELA = 'ESCUELA'
+    SEMINARIO = 'SEMINARIO'
+    AREA = 'AREA'
+    DIVISION = 'DIVISION'
+    MAESTRIA = 'MAESTRIA'
+    CENTRO = 'CENTRO'
+    MATERIA = 'MATERIA'
+    CATEDRA = 'CATEDRA'
     
 
 
