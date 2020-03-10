@@ -1,5 +1,6 @@
 
 def create_tables():
+    import os
     from sqlalchemy import create_engine
     from .entities.Function import Function, FunctionTypes
     from .entities.Designation import Designation, DesignationEndTypes
