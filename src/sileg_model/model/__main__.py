@@ -1,4 +1,21 @@
 
+def create_tables():
+    from .entities.Function import Function, FunctionTypes
+    from .entities.Designation import Designation, DesignationEndTypes
+    from .entities.Place import PlaceTypes, Place
+    from .entities.LeaveLicense import PersonalLeaveLicense, DesignationLeaveLicense
+    from .entities.ExternalSeniority import ExternalSeniority
+    from .entities import Base
+    engine = create_engine('postgresql://{}:{}@{}:{}/{}'.format(
+        os.environ['SILEG_DB_USER'],
+        os.environ['SILEG_DB_PASSWORD'],
+        os.environ['SILEG_DB_HOST'],
+        os.environ['SILEG_DB_PORT'],
+        os.environ['SILEG_DB_NAME']
+    ), echo=True)
+    Base.metadata.create_all(engine)    
+
+
 def insert_model_data():
     """
         Se generan los datos para inicializar la base de datos.
@@ -68,23 +85,5 @@ def insert_model_data():
         #_insert_places(ss)
         ss.commit()
 
-def create_tables():
-    from .entities.Function import Function, FunctionTypes
-    from .entities.Designation import Designation, DesignationEndTypes
-    from .entities.Place import PlaceTypes, Place
-    from .entities.LeaveLicense import PersonalLeaveLicense, DesignationLeaveLicense
-    from .entities.ExternalSeniority import ExternalSeniority
-    from .entities import Base
-    engine = create_engine('postgresql://{}:{}@{}:{}/{}'.format(
-        os.environ['SILEG_DB_USER'],
-        os.environ['SILEG_DB_PASSWORD'],
-        os.environ['SILEG_DB_HOST'],
-        os.environ['SILEG_DB_PORT'],
-        os.environ['SILEG_DB_NAME']
-    ), echo=True)
-    Base.metadata.create_all(engine)    
-
-
-from sileg_model.model import create_tables
 create_tables()
 insert_model_data()
