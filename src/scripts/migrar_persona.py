@@ -5,7 +5,7 @@ import logging
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
-from sileg_model.model import Session
+
 from sqlalchemy import event
 
 from sileg_model.model.entities.Function import Function, FunctionTypes
@@ -17,7 +17,7 @@ from users.model.UsersModel import UsersModel
 
 import uuid
 
-
+"""
 @event.listens_for(Session, 'after_transaction_create')
 def _pts(s, t):
     print('transacción iniciada')
@@ -25,6 +25,7 @@ def _pts(s, t):
 @event.listens_for(Session, 'after_transaction_end')
 def _pte(s, t):
     print('transacción finalizada')
+"""
 
 def transform_name_to_new_model(d,c,cc):
     func = cc + " - "
@@ -47,6 +48,9 @@ dnis = []
 
 dni = sys.argv[1]
 dsn = sys.argv[2]
+
+
+print('leyendo dnis')
 con = psycopg2.connect(dsn=dsn)
 try:
     cur = con.cursor()
@@ -187,16 +191,16 @@ def generar_prorrogas(cur, uid, did, prorrogas):
     raise Exception('falta terminar')
 
 
-with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
+with open('miracion-cargos-sileg.csv','w') as archivo:
 
     for dni in dnis:
+        print(dni)
         con = psycopg2.connect(dsn=dsn)
         try:
             cur = con.cursor()
             try:
                 cur.execute('select empleado_id from empleado e left join persona p on (p.pers_id = e.empleado_pers_id) where pers_nrodoc = %s', (dni,))
                 empleado_id = cur.fetchone()[0]
-
                 cargar_desig_orginales(cur, empleado_id, functions)
                 cargar_lugares_y_catedras(cur, functions)
                 
@@ -221,14 +225,14 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
             con.close()
 
 
-
+        print('buscando usuario')
         with open_users_session() as s2:
             uid = UsersModel.get_uid_person_number(s2, dni)
             if not uid:
                 archivo.write(f'{dni}; No se encuentra un usuario con ese dni\n')
                 raise Exception(f'no se encuentra uid para el dni {dni}')
 
-
+        print('generando')
         silegModel = SilegModel()
         with open_session() as session:
             try:
@@ -253,14 +257,14 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                     func = fs[0]
 
                     c = None
-                    if p['catedra']:
+                    if 'catedra' in p and p['catedra']:
                         cs = silegModel.get_places_by_name(session, p['catedra'])
                         if not cs or len(cs) <= 0:
                             archivo.write(f"{dni};No se encuentra la cátedra;{p['catedra']}\n")
                             raise Exception(f"No se encuentra el lugar {p['catedra']}")
                         c = cs[0]
                     
-                    if p['lugar']:
+                    if 'lugar' in p and p['lugar']:
                         cs = silegModel.get_places_by_name(session, p['lugar'])
                         if not cs or len(cs) <= 0:
                             archivo.write(f"{dni};No se encuentra el lugar;{p['lugar']}\n")
@@ -289,7 +293,7 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                     d.place_id = c
                     d.historic = True if p['fecha_baja'] else False
                     session.add(d)
-                    #session.commit()
+                    session.commit()
 
                     """ genero la baja en el caso de que tenga """
                     if p['fecha_baja']:
@@ -307,7 +311,7 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                         db.cor = p['cor_baja']
                         db.comments = p['baja_comments']
                         session.add(db)
-                        #session.commit()
+                        session.commit()
 
                     """ genero las prorrogas y las almaceno dentro del modelo """
                     for pp in p['prorrogas']:
@@ -326,7 +330,7 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                         dp.place_id = c
                         dp.historic = True if pp['fecha_baja'] else False
                         session.add(dp)
-                        #session.commit()
+                        session.commit()
 
                         """ genero la baja de la prorroga en el caso de que tenga """
                         if pp['fecha_baja']:
@@ -342,7 +346,7 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                             db.res = pp['res_baja']
                             db.comments = pp['baja_comments']
                             session.add(db)
-                            #session.commit()
+                            session.commit()
 
 
                     """ genero las extensiones y las almaceno dentro del modelo """
@@ -377,7 +381,7 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                         dp.place_id = cex
                         dp.historic = True if pp['fecha_baja'] else False
                         session.add(dp)
-                        #session.commit()
+                        session.commit()
 
                         """ genero las bajas de las extensiones """
                         if pp['fecha_baja']:
@@ -393,7 +397,7 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                             db.res = pp['res_baja']
                             db.comments = pp['baja_comments']
                             session.add(db)
-                            #session.commit()
+                            session.commit()
 
                         """ genero las prorrogas de las extensiones """
 
@@ -413,7 +417,7 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                             dpe.place_id = cex
                             dpe.historic = True if pe['fecha_baja'] else False
                             session.add(dpe)
-                            #session.commit()                    
+                            session.commit()                    
 
                             """ genero las bajas de las prorrogas de extension """
                             if pe['fecha_baja']:
@@ -429,10 +433,16 @@ with open('/tmp/miracion-cargos-sileg.csv','w') as archivo:
                                 db.res = pe['res_baja']
                                 db.comments = pe['baja_comments']
                                 session.add(db)
-                                #session.commit()
+                                session.commit()
                 
                     session.commit()
-                    archivo.write(f"{dni};{p['funcion']};{p['catedra']};correctamente migrado\n")
+                    if 'catedra' in p:
+                        archivo.write(f"{dni};{p['funcion']};{p['catedra']};correctamente migrado\n")
+                    if 'lugar' in p:
+                        archivo.write(f"{dni};{p['funcion']};{p['lugar']};correctamente migrado\n")
 
             except Exception as e:
                 archivo.write(f"{dni};{e}\n")
+                logging.exception(e)
+
+        archivo.flush()
