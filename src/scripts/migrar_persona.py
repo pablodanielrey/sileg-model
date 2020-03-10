@@ -166,6 +166,30 @@ def cargar_extensiones(cur, did, fs):
         }
         fs.append(extension_)
 
+def cargar_licencias_cargo(cur, did, ls=[]):
+    cur.execute("""select licencia_id, licencia_fecha_desde, licencia_fecha_hasta, licencia_fecha_baja,
+                    la.licart_descripcion, la.licart_congocesueldo,
+                    ra.resolucion_numero, ra.resolucion_expediente, ra.resolucion_corresponde,
+                    rb.resolucion_numero, rb.resolucion_expediente, rb.resolucion_corresponde,
+                    tb.tipobajadesig_nombre,
+                    tc.tipofincargo_nombre,
+                    tl.tipolicencia_descripcion, tl.tipolicencia_abrev
+    from licencia l 
+    left join licencia_articulos la on (la.licart_id = l.licencia_articulo_id) 
+    left join resolucion ra on (ra.resolucion_id = l.licencia_resolucionalta_id) 
+    left join resolucion rb on (rb.resolucion_id = l.licencia_resolucionbaja_id) 
+    left join tipo_baja tb on (tb.tipobajadesig_id = l.licencia_tipobaja_id) 
+    left join tipo_fin_cargo tc on (tc.tipofincargo_id = l.licencia_tipofincargo_id) 
+    left join tipo_licencia tl on (tl.tipolicencia_id = l.licencia_tipolicencia_id) 
+    where l.licencia_designacion_id = %s
+    """, (did,))
+    """ TODO ACA FALTA """
+
+
+def cargar_prorrogas_de_licencia(cur, licencia, ls=[]):
+    licencia['res']
+    """ ESTO ES CASI IMPOSIBLE ENTENDER QUE QUISIERON HACER """
+
 
 def generar_cargo_original(cur, uid, fid, desig):
     raise Exception('falta terminar')
@@ -193,8 +217,13 @@ def generar_prorrogas(cur, uid, did, prorrogas):
 
 with open('miracion-cargos-sileg.csv','w') as archivo:
 
+    cantidad_total = len(dnis)
+    cantidad_actual = 0
+
     for dni in dnis:
-        print(dni)
+        cantidad_actual = cantidad_actual + 1
+        print(f"DNI: {dni} -- {cantidad_actual}/{cantidad_total}")
+        
         con = psycopg2.connect(dsn=dsn)
         try:
             cur = con.cursor()
@@ -236,7 +265,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
         silegModel = SilegModel()
         with open_session() as session:
             try:
-                """ elimino todas las designaciones de la persona referenciada """
+                """ elimino fisicamente todas las designaciones de la persona referenciada """
                 desigs = silegModel.get_designations_by_uuid(session, uid)
                 ds = silegModel.get_designations(session, desigs)
                 for d_ in ds:
