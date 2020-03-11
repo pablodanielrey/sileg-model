@@ -10,6 +10,7 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
 from sqlalchemy import event
 
+from sileg_model.model.entities.Place import Place, PlaceTypes
 from sileg_model.model.entities.Function import Function, FunctionTypes
 from sileg_model.model.entities.Designation import DesignationEndTypes, DesignationTypes, DesignationStatus, Designation
 from sileg_model.model import open_session
@@ -318,18 +319,27 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
 
         print('generando')
         silegModel = SilegModel()
-        with open_session() as session:
+        with open_session(echo=True) as session:
             try:
                 """ elimino fisicamente todas las designaciones de la persona referenciada """
+                """
                 desigs = silegModel.get_designations_by_uuid(session, uid)
                 ds = silegModel.get_designations(session, desigs, historic=True, deleted=True)
+                a_eliminar = len(ds)
+                eliminadas = 0
                 for d_ in ds:
+                    eliminadas = eliminadas + 1
+                    print(f"{eliminadas}/{a_eliminar}")
                     session.delete(d_)
                 session.commit()
                 ds = None
+                """
+                session.query(Designation).filter(Designation.user_id == uid).delete()
+                session.commit()
             except Exception as e:
                 archivo.write(f"{dni};No se pudieron eliminar las designaciones")
                 continue
+                
 
             print('designaciones eliminadas')
             print('generando')
@@ -347,15 +357,35 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                     if 'catedra' in p and p['catedra']:
                         cs = silegModel.get_places_by_name(session, p['catedra'])
                         if not cs or len(cs) <= 0:
-                            archivo.write(f"{dni};No se encuentra la cátedra;{p['catedra']}\n")
-                            raise Exception(f"No se encuentra el lugar {p['catedra']}")
+                            #archivo.write(f"{dni};No se encuentra la cátedra;{p['catedra']}\n")
+                            #raise Exception(f"No se encuentra el lugar {p['catedra']}")
+
+                            pid = str(uuid.uuid4())
+                            lugar = Place()
+                            lugar.id = pid
+                            lugar.name = p['catedra']
+                            lugar.type = PlaceTypes.CATEDRA
+                            session.add(lugar)
+                            session.commit()
+                            cs = silegModel.get_places_by_name(session, p['catedra'])
+
                         c = cs[0]
                     
                     if 'lugar' in p and p['lugar']:
                         cs = silegModel.get_places_by_name(session, p['lugar'])
                         if not cs or len(cs) <= 0:
-                            archivo.write(f"{dni};No se encuentra el lugar;{p['lugar']}\n")
-                            raise Exception(f"No se encuentra el lugar {p['lugar']}")
+                            #archivo.write(f"{dni};No se encuentra el lugar;{p['lugar']}\n")
+                            #raise Exception(f"No se encuentra el lugar {p['lugar']}")
+
+                            pid = str(uuid.uuid4())
+                            lugar = Place()
+                            lugar.id = pid
+                            lugar.name = p['lugar']
+                            lugar.type = PlaceTypes.AREA
+                            session.add(lugar)
+                            session.commit()
+                            cs = silegModel.get_places_by_name(session, p['lugar'])
+
                         c = cs[0]
 
                     if not c:
