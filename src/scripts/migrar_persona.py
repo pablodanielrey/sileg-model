@@ -169,8 +169,8 @@ def cargar_extensiones(cur, did, fs):
 def cargar_licencias_cargo(cur, did, ls=[]):
     cur.execute("""select licencia_id, licencia_fecha_desde, licencia_fecha_hasta, licencia_fecha_baja,
                     la.licart_descripcion, la.licart_congocesueldo,
-                    ra.resolucion_numero, ra.resolucion_expediente, ra.resolucion_corresponde,
-                    rb.resolucion_numero, rb.resolucion_expediente, rb.resolucion_corresponde,
+                    ra.resolucion_numero as res_alta, ra.resolucion_expediente as exp_alta, ra.resolucion_corresponde as cor_alta,
+                    rb.resolucion_numero as res_baja, rb.resolucion_expediente as exp_baja, rb.resolucion_corresponde as cor_baja,
                     tb.tipobajadesig_nombre,
                     tc.tipofincargo_nombre,
                     tl.tipolicencia_descripcion, tl.tipolicencia_abrev
@@ -183,12 +183,38 @@ def cargar_licencias_cargo(cur, did, ls=[]):
     left join tipo_licencia tl on (tl.tipolicencia_id = l.licencia_tipolicencia_id) 
     where l.licencia_designacion_id = %s
     """, (did,))
-    """ TODO ACA FALTA """
+    for c in cur:
+        lic = {
+            'id': c[0],
+            'desde': c[1],
+            'hasta': c[2],
+            'baja': c[3],
+            'articulo': c[4],
+            'goce': c[5],
+            'res_alta': c[6],
+            'exp_alta': c[7],
+            'cor_alta': c[8],
+            'res_baja': c[9],
+            'exp_baja': c[10],
+            'cor_baja': c[11],
+            'tipo_baja': c[12],
+            'fin_cargo': c[13],
+            'tipo_lic': c[14],
+            'tipo_lic_corto': c[15],
+            'prorrogas': []
+        }
+        ls.append(lic)
 
-
-def cargar_prorrogas_de_licencia(cur, licencia, ls=[]):
-    licencia['res']
-    """ ESTO ES CASI IMPOSIBLE ENTENDER QUE QUISIERON HACER """
+def cargar_prorrogas_de_licencia(cur, lic):
+    lid = lic['id']
+    cur.execute("""select prorroga_id, prorroga_fecha_desde, prorroga_fecha_hasta, 
+        prorroga_fecha_baja, tb.tipobajadesig_nombre
+        from prorroga p 
+        left join resolucion ra on (ra.resolucion_id = p.prorroga_resolucionalta_id) 
+        left join resolucion rb on (rb.resolucion_id = p.prorroga_resolucionbaja_id) 
+        left join tipo_baja tb on (tb.tipobajadesig_id = p.prorroga_tipobaja_id) 
+        where p.prorroga_prorroga_de = %s and p.prorroga_prorroga_de_id = %s
+    """, ('lic',lid))
 
 
 def generar_cargo_original(cur, uid, fid, desig):
