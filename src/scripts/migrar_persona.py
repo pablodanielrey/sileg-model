@@ -263,9 +263,7 @@ def generar_prorrogas(cur, uid, did, prorrogas):
 
 
 def _get_historic(d):
-    ''' si tiene fecha de baja y es menor a hoy entonces se pone como historica '''
-    return 'fecha_baja' in d and d['fecha_baja'] is not None and d['fecha_baja'] <= datetime.date.today()
-
+    return d['res_baja'] is not None or d['exp_baja'] is not None or d['cor_baja'] is not None
 
 with open('migracion-cargos-sileg.csv','w') as archivo:
 
@@ -413,7 +411,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                     session.commit()
 
                     """ genero la baja en el caso de que tenga """
-                    if p['res_baja'] or p['exp_baja'] or p['cor_baja']:
+                    if _get_historic(p):
                         print("Generando baja de designacion")
                         db = Designation()
                         db.type = DesignationTypes.DISCHARGE
@@ -441,6 +439,8 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                         dp.user_id = uid
                         dp.designation_id = designacion_id
                         dp.res = pp['res']
+                        dp.exp = pp['exp']
+                        dp.cor = pp['cor']
                         dp.start = pp['desde']
                         dp.end = pp['hasta']
                         dp.end_type = DesignationEndTypes.INDETERMINATE
@@ -451,7 +451,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                         session.commit()
 
                         """ genero la baja de la prorroga en el caso de que tenga """
-                        if pp['res_baja'] or pp['exp_baja'] or pp['cor_baja']:
+                        if _get_historic(pp):
                             print("generando baja de prorroga")
                             db = Designation()
                             db.type = DesignationTypes.DISCHARGE
@@ -495,6 +495,8 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                         dp.user_id = uid
                         dp.designation_id = designacion_id
                         dp.res = pp['res']
+                        dp.cor = pp['cor']
+                        dp.exp = pp['exp']
                         dp.start = pp['desde']
                         dp.end = pp['hasta']
                         dp.end_type = DesignationEndTypes.INDETERMINATE
@@ -505,7 +507,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                         session.commit()
 
                         """ genero las bajas de las extensiones """
-                        if pp['res_baja'] or pp['exp_baja'] or pp['cor_baja']:
+                        if _get_historic(pp):
                             print("Generando baja de extension")
                             db = Designation()
                             db.type = DesignationTypes.DISCHARGE
@@ -534,6 +536,8 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                             dpe.user_id = uid
                             dpe.designation_id = extension_id
                             dpe.res = pe['res']
+                            dpe.cor = pe['cor']
+                            dpe.exp = pe['exp']
                             dpe.start = pe['desde']
                             dpe.end = pe['hasta']
                             dpe.end_type = DesignationEndTypes.INDETERMINATE
@@ -544,7 +548,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                             session.commit()                    
 
                             """ genero las bajas de las prorrogas de extension """
-                            if pe['res_baja'] or pe['exp_baja'] or pe['cor_baja']:
+                            if _get_historic(pe):
                                 print(f"Generando baja de prorroga de extension")
                                 db = Designation()
                                 db.type = DesignationTypes.DISCHARGE
