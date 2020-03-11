@@ -364,7 +364,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                     d.function_id = func
                     d.user_id = uid
                     d.place_id = c
-                    d.historic = True if p['fecha_baja'] else False
+                    d.historic = False
                     session.add(d)
                     session.commit()
 
@@ -382,6 +382,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                         db.res = p['res_baja']
                         db.exp = p['exp_baja']
                         db.cor = p['cor_baja']
+                        db.historic = False
                         db.comments = p['baja_comments']
                         session.add(db)
                         session.commit()
@@ -401,7 +402,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                         dp.end_type = DesignationEndTypes.INDETERMINATE
                         dp.function_id = func
                         dp.place_id = c
-                        dp.historic = True if pp['fecha_baja'] else False
+                        dp.historic = False
                         session.add(dp)
                         session.commit()
 
@@ -417,6 +418,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                             db.start = pp['fecha_baja']
                             db.end_type = DesignationEndTypes.INDETERMINATE
                             db.res = pp['res_baja']
+                            db.historic = False
                             db.comments = pp['baja_comments']
                             session.add(db)
                             session.commit()
@@ -452,7 +454,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                         dp.end_type = DesignationEndTypes.INDETERMINATE
                         dp.function_id = funcex
                         dp.place_id = cex
-                        dp.historic = True if pp['fecha_baja'] else False
+                        dp.historic = False
                         session.add(dp)
                         session.commit()
 
@@ -468,6 +470,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                             db.start = pp['fecha_baja']
                             db.end_type = DesignationEndTypes.INDETERMINATE
                             db.res = pp['res_baja']
+                            db.historic = False
                             db.comments = pp['baja_comments']
                             session.add(db)
                             session.commit()
@@ -488,7 +491,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                             dpe.end_type = DesignationEndTypes.INDETERMINATE
                             dpe.function_id = funcex
                             dpe.place_id = cex
-                            dpe.historic = True if pe['fecha_baja'] else False
+                            dpe.historic = False
                             session.add(dpe)
                             session.commit()                    
 
@@ -504,6 +507,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                                 db.start = pe['fecha_baja']
                                 db.end_type = DesignationEndTypes.INDETERMINATE
                                 db.res = pe['res_baja']
+                                db.historic = False
                                 db.comments = pe['baja_comments']
                                 session.add(db)
                                 session.commit()
