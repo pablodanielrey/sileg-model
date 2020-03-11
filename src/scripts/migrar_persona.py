@@ -205,16 +205,34 @@ def cargar_licencias_cargo(cur, did, ls=[]):
         }
         ls.append(lic)
 
-def cargar_prorrogas_de_licencia(cur, lic):
-    lid = lic['id']
+def cargar_prorrogas_de_licencia(cur, lid, prorrogas=[]):
     cur.execute("""select prorroga_id, prorroga_fecha_desde, prorroga_fecha_hasta, 
-        prorroga_fecha_baja, tb.tipobajadesig_nombre
+        prorroga_fecha_baja, tb.tipobajadesig_nombre,
+        ra.resolucion_numero as res_alta, ra.resolucion_expediente as exp_alta, ra.resolucion_corresponde as cor_alta,
+        rb.resolucion_numero as res_baja, rb.resolucion_expediente as exp_baja, rb.resolucion_corresponde as cor_baja
         from prorroga p 
         left join resolucion ra on (ra.resolucion_id = p.prorroga_resolucionalta_id) 
         left join resolucion rb on (rb.resolucion_id = p.prorroga_resolucionbaja_id) 
         left join tipo_baja tb on (tb.tipobajadesig_id = p.prorroga_tipobaja_id) 
         where p.prorroga_prorroga_de = %s and p.prorroga_prorroga_de_id = %s
     """, ('lic',lid))
+    for c in cur.fetchall():
+        p = {
+            'id': c[0],
+            'desde': c[1],
+            'hasta': c[2],
+            'baja': c[3],
+            'tipo_baja': c[4],
+            'res_alta': c[5],
+            'exp_alta': c[6],
+            'cor_alta': c[7],
+            'res_baja': c[8],
+            'exp_baja': c[9],
+            'cor_baja': c[10]
+        }
+        prorrogas.append(p)
+        cargar_prorrogas_de_licencia(cur, p['id'], prorrogas)
+
 
 
 def generar_cargo_original(cur, uid, fid, desig):
