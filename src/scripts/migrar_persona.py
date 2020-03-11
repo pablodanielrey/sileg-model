@@ -274,7 +274,8 @@ def generar_prorrogas(cur, uid, did, prorrogas):
 
 
 def _get_historic(d):
-    return (d['res_baja'] is not None and d['res_baja'] != '') or (d['exp_baja'] is not None and d['exp_baja'] != '') or (d['cor_baja'] is not None and d['cor_baja'] != '')
+    #return (d['res_baja'] is not None and d['res_baja'] != '') or (d['exp_baja'] is not None and d['exp_baja'] != '') or (d['cor_baja'] is not None and d['cor_baja'] != '')
+    return not (d['fecha_baja'] is None or d['fecha_baja'] > datetime.date.now())
 
 with open('migracion-cargos-sileg.csv','w') as archivo:
     with open('cargos-leidos.csv', 'w') as acargos:
