@@ -413,7 +413,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                     session.commit()
 
                     """ genero la baja en el caso de que tenga """
-                    if 'fecha_baja' in p and p['fecha_baja'] is not None:
+                    if p['res_baja'] or p['exp_baja'] or p['cor_baja']:
                         print("Generando baja de designacion")
                         db = Designation()
                         db.type = DesignationTypes.DISCHARGE
@@ -451,7 +451,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                         session.commit()
 
                         """ genero la baja de la prorroga en el caso de que tenga """
-                        if pp['fecha_baja']:
+                        if pp['res_baja'] or pp['exp_baja'] or pp['cor_baja']:
                             print("generando baja de prorroga")
                             db = Designation()
                             db.type = DesignationTypes.DISCHARGE
@@ -462,6 +462,8 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                             db.start = pp['fecha_baja']
                             db.end_type = DesignationEndTypes.INDETERMINATE
                             db.res = pp['res_baja']
+                            db.exp = pp['exp_baja']
+                            db.cor = pp['cor_baja']
                             db.historic = True
                             db.comments = pp['baja_comments']
                             session.add(db)
@@ -503,7 +505,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                         session.commit()
 
                         """ genero las bajas de las extensiones """
-                        if pp['fecha_baja']:
+                        if pp['res_baja'] or pp['exp_baja'] or pp['cor_baja']:
                             print("Generando baja de extension")
                             db = Designation()
                             db.type = DesignationTypes.DISCHARGE
@@ -514,6 +516,8 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                             db.start = pp['fecha_baja']
                             db.end_type = DesignationEndTypes.INDETERMINATE
                             db.res = pp['res_baja']
+                            db.exp = pp['exp_baja']
+                            db.cor = pp['cor_baja']
                             db.historic = True
                             db.comments = pp['baja_comments']
                             session.add(db)
@@ -540,7 +544,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                             session.commit()                    
 
                             """ genero las bajas de las prorrogas de extension """
-                            if pe['fecha_baja']:
+                            if pe['res_baja'] or pe['exp_baja'] or pe['cor_baja']:
                                 print(f"Generando baja de prorroga de extension")
                                 db = Designation()
                                 db.type = DesignationTypes.DISCHARGE
@@ -551,6 +555,8 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                                 db.start = pe['fecha_baja']
                                 db.end_type = DesignationEndTypes.INDETERMINATE
                                 db.res = pe['res_baja']
+                                db.exp = pe['exp_baja']
+                                db.cor = pe['cor_baja']                                
                                 db.historic = True
                                 db.comments = pe['baja_comments']
                                 session.add(db)
