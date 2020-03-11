@@ -70,7 +70,7 @@ class Designation(Base):
     end = Column(Date)
     end_type = Column(SQLEnum(DesignationEndTypes))
     
-    historic = Column(Boolean, defaults=False)
+    historic = Column(Boolean, default=False)
 
     exp = Column(String)
     res = Column(String)
