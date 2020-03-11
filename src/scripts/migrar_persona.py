@@ -317,7 +317,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
 
         print('generando')
         silegModel = SilegModel()
-        with open_session(echo=True) as session:
+        with open_session(echo=False) as session:
             try:
                 """ elimino fisicamente todas las designaciones de la persona referenciada """
                 """
@@ -347,8 +347,19 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
 
                     fs = silegModel.get_functions_by_name(session, p['funcion'])
                     if not fs or len(fs) <= 0:
-                        archivo.write(f"{dni};No se encuentra la función;{p['funcion']}\n")
-                        raise Exception(f"No se encuentra la fucion {p['funcion']}")
+                        #archivo.write(f"{dni};No se encuentra la función;{p['funcion']}\n")
+                        #raise Exception(f"No se encuentra la fucion {p['funcion']}")
+
+                        fid = str(uuid.uuid4())
+                        function = Function()
+                        function.id = fid
+                        function.type = FunctionTypes.DOCENTE
+                        function.name = p['funcion']
+                        function.description = 'IMPORTADO SILEG'
+                        session.add(function)
+                        session.commit()
+                        fs = silegModel.get_functions_by_name(session, p['funcion'])
+
                     func = fs[0]
 
                     c = None
@@ -476,15 +487,52 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                         """ busco el cargo """
                         fs = silegModel.get_functions_by_name(session, pp['funcion'])
                         if not fs or len(fs) <= 0:
-                            archivo.write(f"{dni};No se encuentra la función;{pp['funcion']}")
-                            raise Exception(f"No se encuentra la fucion {pp['funcion']}")
+                            #archivo.write(f"{dni};No se encuentra la función;{pp['funcion']}")
+                            #raise Exception(f"No se encuentra la fucion {pp['funcion']}")
+
+                            fid = str(uuid.uuid4())
+                            function = Function()
+                            function.id = fid
+                            function.type = FunctionTypes.DOCENTE
+                            function.name = pp['funcion']
+                            function.description = 'IMPORTADO SILEG'
+                            session.add(function)
+                            session.commit()
+                            fs = silegModel.get_functions_by_name(session, pp['funcion'])
+
                         funcex = fs[0]
 
                         """ busco el lugar """
-                        cs = silegModel.get_places_by_name(session, pp['catedra'])
-                        if not cs or len(cs) <= 0:
-                            archivo.write(f"{dni};No se encuentra la cátedra;{pp['catedra']}\n")
-                            raise Exception(f"No se encuentra el lugar {pp['catedra']}\n")
+                        if 'catedra' in pp and pp['catedra']:
+                            cs = silegModel.get_places_by_name(session, pp['catedra'])
+                            if not cs or len(cs) <= 0:
+                                #archivo.write(f"{dni};No se encuentra la cátedra;{pp['catedra']}\n")
+                                #raise Exception(f"No se encuentra el lugar {pp['catedra']}\n")
+
+                                _pid = str(uuid.uuid4())
+                                lugar = Place()
+                                lugar.id = _pid
+                                lugar.name = pp['catedra']
+                                lugar.type = PlaceTypes.CATEDRA
+                                session.add(lugar)
+                                session.commit()
+                                cs = silegModel.get_places_by_name(session, pp['catedra'])
+
+                        if 'lugar' in pp and pp['lugar']:
+                            cs = silegModel.get_places_by_name(session, pp['lugar'])
+                            if not cs or len(cs) <= 0:
+                                #archivo.write(f"{dni};No se encuentra el lugar;{p['lugar']}\n")
+                                #raise Exception(f"No se encuentra el lugar {p['lugar']}")
+
+                                pid = str(uuid.uuid4())
+                                lugar = Place()
+                                lugar.id = pid
+                                lugar.name = pp['lugar']
+                                lugar.type = PlaceTypes.AREA
+                                session.add(lugar)
+                                session.commit()
+                                cs = silegModel.get_places_by_name(session, pp['lugar'])
+
                         cex = cs[0]
 
                         print(f"Generando extension {pp['desde']}")
@@ -568,9 +616,9 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                 
                     session.commit()
                     if 'catedra' in p:
-                        archivo.write(f"{dni};{p['desde']};p['hasta'];{p['funcion']};{p['catedra']};correctamente migrado\n")
+                        archivo.write(f"{dni};{p['desde']};{p['hasta']};{p['funcion']};{p['catedra']};correctamente migrado\n")
                     if 'lugar' in p:
-                        archivo.write(f"{dni};{p['desde']};p['hasta'];{p['funcion']};{p['lugar']};correctamente migrado\n")
+                        archivo.write(f"{dni};{p['desde']};{p['hasta']};{p['funcion']};{p['lugar']};correctamente migrado\n")
 
             except Exception as e:
                 archivo.write(f"{dni};{e}\n")
