@@ -38,8 +38,6 @@ class SilegModel:
 
         if not deleted:
             query = query.filter(Designation.deleted == None)
-        else:
-            query = query.filter(Designation.deleted != None)
 
         return query.filter(Designation.id.in_(dids)).all()
 

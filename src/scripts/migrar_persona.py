@@ -1,6 +1,8 @@
 import sys
 import psycopg2
 
+import datetime
+
 import logging
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
@@ -46,7 +48,7 @@ functions = []
 
 dnis = []
 
-dni = sys.argv[1]
+dni_seleccionado = sys.argv[1]
 dsn = sys.argv[2]
 
 
@@ -259,10 +261,19 @@ def generar_prorrogas(cur, uid, did, prorrogas):
     raise Exception('falta terminar')
 
 
-with open('miracion-cargos-sileg.csv','w') as archivo:
+def _get_historic(d):
+    ''' si tiene fecha de baja y es menor a hoy entonces se pone como historica '''
+    return 'fecha_baja' in d and d['fecha_baja'] is not None and d['fecha_baja'] <= datetime.date.today()
+
+
+with open('migracion-cargos-sileg.csv','w') as archivo:
 
     cantidad_total = len(dnis)
     cantidad_actual = 0
+
+    ''' si se pone 1 como dni se migran todos los dnis '''
+    if dni_seleccionado != '1':
+        dnis = [dni_seleccionado]
 
     for dni in dnis:
         cantidad_actual = cantidad_actual + 1
@@ -311,7 +322,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
             try:
                 """ elimino fisicamente todas las designaciones de la persona referenciada """
                 desigs = silegModel.get_designations_by_uuid(session, uid)
-                ds = silegModel.get_designations(session, desigs)
+                ds = silegModel.get_designations(session, desigs, historic=True, deleted=True)
                 for d_ in ds:
                     session.delete(d_)
                 session.commit()
@@ -319,6 +330,9 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
             except Exception as e:
                 archivo.write(f"{dni};No se pudieron eliminar las designaciones")
                 continue
+
+            print('designaciones eliminadas')
+            print('generando')
 
             try:
                 for p in functions:
@@ -364,12 +378,12 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                     d.function_id = func
                     d.user_id = uid
                     d.place_id = c
-                    d.historic = False
+                    d.historic = _get_historic(p)
                     session.add(d)
                     session.commit()
 
                     """ genero la baja en el caso de que tenga """
-                    if p['fecha_baja']:
+                    if 'fecha_baja' in p and p['fecha_baja'] is not None:
                         print("Generando baja de designacion")
                         db = Designation()
                         db.type = DesignationTypes.DISCHARGE
@@ -382,7 +396,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                         db.res = p['res_baja']
                         db.exp = p['exp_baja']
                         db.cor = p['cor_baja']
-                        db.historic = False
+                        db.historic = True
                         db.comments = p['baja_comments']
                         session.add(db)
                         session.commit()
@@ -402,7 +416,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                         dp.end_type = DesignationEndTypes.INDETERMINATE
                         dp.function_id = func
                         dp.place_id = c
-                        dp.historic = False
+                        dp.historic = _get_historic(pp)
                         session.add(dp)
                         session.commit()
 
@@ -418,7 +432,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                             db.start = pp['fecha_baja']
                             db.end_type = DesignationEndTypes.INDETERMINATE
                             db.res = pp['res_baja']
-                            db.historic = False
+                            db.historic = True
                             db.comments = pp['baja_comments']
                             session.add(db)
                             session.commit()
@@ -454,7 +468,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                         dp.end_type = DesignationEndTypes.INDETERMINATE
                         dp.function_id = funcex
                         dp.place_id = cex
-                        dp.historic = False
+                        dp.historic = _get_historic(pp)
                         session.add(dp)
                         session.commit()
 
@@ -470,7 +484,7 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                             db.start = pp['fecha_baja']
                             db.end_type = DesignationEndTypes.INDETERMINATE
                             db.res = pp['res_baja']
-                            db.historic = False
+                            db.historic = True
                             db.comments = pp['baja_comments']
                             session.add(db)
                             session.commit()
@@ -485,13 +499,13 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                             dpe.type = DesignationTypes.EXTENSION
                             dpe.user_id = uid
                             dpe.designation_id = extension_id
-                            dpe.res = pp['res']
-                            dpe.start = pp['desde']
-                            dpe.end = pp['hasta']
+                            dpe.res = pe['res']
+                            dpe.start = pe['desde']
+                            dpe.end = pe['hasta']
                             dpe.end_type = DesignationEndTypes.INDETERMINATE
                             dpe.function_id = funcex
                             dpe.place_id = cex
-                            dpe.historic = False
+                            dpe.historic = _get_historic(pe)
                             session.add(dpe)
                             session.commit()                    
 
@@ -507,16 +521,16 @@ with open('miracion-cargos-sileg.csv','w') as archivo:
                                 db.start = pe['fecha_baja']
                                 db.end_type = DesignationEndTypes.INDETERMINATE
                                 db.res = pe['res_baja']
-                                db.historic = False
+                                db.historic = True
                                 db.comments = pe['baja_comments']
                                 session.add(db)
                                 session.commit()
                 
                     session.commit()
                     if 'catedra' in p:
-                        archivo.write(f"{dni};{p['funcion']};{p['catedra']};correctamente migrado\n")
+                        archivo.write(f"{dni};{p['desde']};p['hasta'];{p['funcion']};{p['catedra']};correctamente migrado\n")
                     if 'lugar' in p:
-                        archivo.write(f"{dni};{p['funcion']};{p['lugar']};correctamente migrado\n")
+                        archivo.write(f"{dni};{p['desde']};p['hasta'];{p['funcion']};{p['lugar']};correctamente migrado\n")
 
             except Exception as e:
                 archivo.write(f"{dni};{e}\n")
