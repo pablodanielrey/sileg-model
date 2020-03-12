@@ -121,7 +121,7 @@ def cargar_desig_orginales(cur, empleado_id, functions):
             'lugar_id':p[15]
         })
 
-def cargar_prorrogas(cur, did, fs):
+def cargar_prorrogas(cur, did, de, fs):
     cur.execute("""select prorroga_fecha_desde, prorroga_fecha_hasta, 
                 r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
                 r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,
@@ -131,9 +131,9 @@ def cargar_prorrogas(cur, did, fs):
                 left join resolucion r on (p.prorroga_resolucionalta_id = r.resolucion_id)
                 left join resolucion r2 on (p.prorroga_resolucionbaja_id = r2.resolucion_id)
                 left join tipo_baja tb on (p.prorroga_tipobaja_id = tb.tipobajadesig_id)
-                where prorroga_prorroga_de_id = %s""", (did,))
+                where prorroga_prorroga_de = %s and prorroga_prorroga_de_id = %s""", (de, did))
     for p in cur.fetchall():
-        fs.append({
+        prorr = {
             'desde': p[0],
             'hasta': p[1],
             'res': p[2],
@@ -145,7 +145,9 @@ def cargar_prorrogas(cur, did, fs):
             'fecha_baja': p[8],
             'baja_comments': p[9],
             'id': p[10]
-        })
+        }
+        fs.append(prorr)
+        cargar_prorrogas(cur, prorr['id'], 'pro', fs)
 
 def cargar_extensiones(cur, did, fs):
     cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_catxmat_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, 
@@ -158,7 +160,7 @@ def cargar_extensiones(cur, did, fs):
                 left join resolucion r2 on (dd.extension_resolucionbaja_id = r2.resolucion_id)
                 left join tipo_baja tb on (dd.extension_tipobaja_id = tb.tipobajadesig_id)
                 left join tipo_dedicacion td on (dd.extension_nuevadedicacion_id = td.tipodedicacion_id) 
-                where dd.extension_catxmat_id is not null and dd.extension_designacion_id = %s""", (did,))
+                where dd.extension_designacion_id = %s""", (did,))
     for p in cur.fetchall():
         eid = p[0]
         extension_ = {
@@ -275,7 +277,7 @@ def generar_prorrogas(cur, uid, did, prorrogas):
 
 def _get_historic(d):
     #return (d['res_baja'] is not None and d['res_baja'] != '') or (d['exp_baja'] is not None and d['exp_baja'] != '') or (d['cor_baja'] is not None and d['cor_baja'] != '')
-    return not (d['fecha_baja'] is None or d['fecha_baja'] > datetime.date.now())
+    return not (d['fecha_baja'] is None or d['fecha_baja'] > datetime.date.today())
 
 with open('migracion-cargos-sileg.csv','w') as archivo:
     with open('cargos-leidos.csv', 'w') as acargos:
@@ -304,7 +306,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                         #cargo la info de las prorrogas.
                         did = f['did']
                         f['prorrogas'] = []
-                        cargar_prorrogas(cur, did, f['prorrogas'])
+                        cargar_prorrogas(cur, did, 'des', f['prorrogas'])
 
                         # cargo la info de las extensiones de cada cargo.
                         f['extensiones'] = []
@@ -313,7 +315,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                         for e in f['extensiones']:
                             #cargo la info de las prorrogas de extensión
                             eid = e['eid']
-                            cargar_prorrogas(cur, eid, e['prorrogas'])
+                            cargar_prorrogas(cur, eid, 'ext', e['prorrogas'])
 
                 finally:
                     cur.close()
