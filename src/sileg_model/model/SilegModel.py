@@ -9,10 +9,10 @@ from .entities.ExternalSeniority import ExternalSeniority
 class SilegModel:
 
     def get_external_seniority_by_user(self, session, uid):
-        return [es.id for es in session.query(ExternalSeniority.id).filter(ExternalSeniority.user_id == uid).all()]
+        return [es.id for es in session.query(ExternalSeniority.id).filter(ExternalSeniority.user_id == uid, ExternalSeniority.deleted == None).all()]
 
     def get_external_seniority(self, session, ids=[]):
-        session.query(ExternalSeniority).filter(ExternalSeniority.id.in_(ids)).all()
+        return session.query(ExternalSeniority).filter(ExternalSeniority.id.in_(ids)).all()
 
     def get_designation_end_types(self):
         return [d.value for d in DesignationEndTypes]
