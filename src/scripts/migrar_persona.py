@@ -221,6 +221,7 @@ def cargar_licencias_cargo(cur, did, ls=[]):
         }
         ls.append(lic)
 
+
 def cargar_prorrogas_de_licencia(cur, lid, prorrogas=[]):
     cur.execute("""select prorroga_id, prorroga_fecha_desde, prorroga_fecha_hasta, 
         prorroga_fecha_baja, tb.tipobajadesig_nombre,
@@ -248,7 +249,6 @@ def cargar_prorrogas_de_licencia(cur, lid, prorrogas=[]):
         }
         prorrogas.append(p)
         cargar_prorrogas_de_licencia(cur, p['id'], prorrogas)
-
 
 
 def generar_cargo_original(cur, uid, fid, desig):
@@ -279,8 +279,23 @@ def _get_historic(d):
     #return (d['res_baja'] is not None and d['res_baja'] != '') or (d['exp_baja'] is not None and d['exp_baja'] != '') or (d['cor_baja'] is not None and d['cor_baja'] != '')
     return not (d['fecha_baja'] is None or d['fecha_baja'] > datetime.date.today())
 
-with open('migracion-cargos-sileg.csv','w') as archivo:
-    with open('cargos-leidos.csv', 'w') as acargos:
+
+
+"""
+    leo los dnis que ya fueron migrados.
+"""
+dnis_ya_migrados = []
+with open('migracion-cargos-sileg.csv','r') as archivo:
+    for l in archivo:
+        dni = l.split(';')[0]
+        if dni not in dnis_ya_migrados:
+            print(f"agregando dni {dni} a la lista de migrados")
+            dnis_ya_migrados.append(dni)
+        
+
+with open('migracion-cargos-sileg.csv','a') as archivo:
+    with open('cargos-leidos.csv', 'a') as acargos:
+        acargos.write('[')
 
         cantidad_total = len(dnis)
         cantidad_actual = 0
@@ -288,12 +303,16 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
         ''' si se pone 1 como dni se migran todos los dnis '''
         if dni_seleccionado != '1':
             dnis = [dni_seleccionado]
+            dnis_ya_migrados = []
 
         for dni in dnis:
             functions = []
             cantidad_actual = cantidad_actual + 1
             print(f"DNI: {dni} -- {cantidad_actual}/{cantidad_total}")
-            
+
+            if dni in dnis_ya_migrados:
+                continue
+
             con = psycopg2.connect(dsn=dsn)
             try:
                 cur = con.cursor()
@@ -326,7 +345,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
 
             print('escribiendo cargos')
             acargos.write(json.dumps(functions, default=json_serial))
-
+            acargos.write(',')
 
             print('buscando usuario')
             with open_users_session() as s2:
@@ -645,3 +664,5 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
                     logging.exception(e)
 
             archivo.flush()
+
+        acargos.write(']')
