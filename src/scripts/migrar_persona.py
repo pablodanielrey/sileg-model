@@ -290,6 +290,7 @@ with open('migracion-cargos-sileg.csv','w') as archivo:
             dnis = [dni_seleccionado]
 
         for dni in dnis:
+            functions = []
             cantidad_actual = cantidad_actual + 1
             print(f"DNI: {dni} -- {cantidad_actual}/{cantidad_total}")
             
