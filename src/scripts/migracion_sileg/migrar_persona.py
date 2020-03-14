@@ -489,7 +489,7 @@ def _generar_cargo_original(session, uid, function_id, place_id, desig):
         d.type = DesignationTypes.ORIGINAL
         d.designation_id = None
     else:
-        d.type = DesignationEndTypes.REPLACEMENT
+        d.type = DesignationTypes.REPLACEMENT
         ''' este dato va a ser generado por otro script verificando las designationlabels '''
         d.designation_id = None
 
@@ -709,28 +709,73 @@ def generar_cargos(silegSession, functions, uid, dni):
     ///////////////////////////////////////////////////
 """
 
-
 def _eliminar_designaciones_anteriores(session, uid):
     try:
-        """ elimino fisicamente todas las designaciones de la persona referenciada """
+        """ 
+            elimino fisicamente todas las designaciones de la persona referenciada 
+            las designaciones tienen hasta 2 niveles de indirección.
+            y las licencias también.
+            o sea que a  lo sumo puede haber hasta 3 niveles en total de anidamiento parmiento de una designación.
+
+            designacion --> 
+                  baja
+                  prorroga --> 
+                      baja
+
+                  licencia -->
+                     baja
+                     prorroga -->
+                        baja 
+
+            persona -->
+                licencia -->
+                   baja
+                   prorroga -->
+                      baja
+                      
+        """
         pls = session.query(PersonalLeaveLicense).filter(PersonalLeaveLicense.user_id == uid).all()
         for l in pls:
-            ''' elimino las prorrogas de la designacion '''
-            session.query(PersonalLeaveLicense).filter(PersonalLeaveLicense.license_id == l.id).delete()
+            ''' licencias '''
+            for lp in l.licences:
+                ''' prorrogas '''
+                for lb in lp.licences:
+                    ''' bajas '''
+                    session.delete(lb)
+                    session.commit()
+                session.delete(lp)
+                session.commit()
             session.delete(l)
+            session.commit()
 
         desigs = session.query(Designation).filter(Designation.user_id == uid).all()
         for d in desigs:
             ''' elimino las licencias que tenga '''
             ls = session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.designation_id == d.id).all()
             for l in ls:
-                ''' elimino las prorrogas que tenga esa licencia '''
-                rdids = [d.id for d in session.query(DesignationLeaveLicense.id).filter(DesignationLeaveLicense.designation_id == l.id).all()]
-                session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.designation_id.in_(rdids)).delete()
-                session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.designation_id == l.id).delete()
+                ''' prorrogas '''
+                for lp in l.licences:
+                    ''' bajas '''
+                    for baja in lp.licences:
+                        session.delete(baja)
+                        session.commit()
+                    session.delete(lp)
+                    session.commit()
                 session.delete(l)
+                session.commit()
+
+            for dp in d.designations:
+                ''' prorrogas '''
+                for baja in dp.designations:
+                    ''' bajas '''
+                    session.delete(baja)
+                    session.commit()
+                session.delete(dp)
+                session.commit()
+
             session.delete(d)
-        session.commit()
+            session.commit()
+
     except Exception as e:
         print(e)
         logging.exception(e)

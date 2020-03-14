@@ -82,6 +82,8 @@ class Designation(Base):
     type = Column(SQLEnum(DesignationTypes))
     #categorias = relationship('CategoriaDesignacion', secondary=categoria_designacion_table, back_populates='designaciones')
 
+    labels = relationship('DesignationLabel', cascade="all, delete")
+
     designation_id = Column(String, ForeignKey('designations.id'))
 
     user_id = Column(String)

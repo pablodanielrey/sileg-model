@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Date, Table, ForeignKey, Boolean, Enum as SQLEnum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from enum import Enum
 
@@ -207,6 +207,8 @@ class PersonalLeaveLicense(Base):
     comments = Column(String)
     perceive_salary = Column(Boolean, default=False)
 
+PersonalLeaveLicense.licences = relationship('PersonalLeaveLicense', backref=backref('license', remote_side=[PersonalLeaveLicense.id]))
+
 
 class DesignationLeaveLicense(Base):
 
@@ -232,3 +234,6 @@ class DesignationLeaveLicense(Base):
     comments = Column(String)
 
     perceive_salary = Column(Boolean, default=False)
+
+
+DesignationLeaveLicense.licences = relationship('DesignationLeaveLicense', backref=backref('license', remote_side=[DesignationLeaveLicense.id]))
