@@ -29,14 +29,13 @@ from users.model.UsersModel import UsersModel
 
 import uuid
 
-"""
-@event.listens_for(Session, 'after_transaction_create')
-def _pts(s, t):
-    print('transacción iniciada')
 
-@event.listens_for(Session, 'after_transaction_end')
-def _pte(s, t):
-    print('transacción finalizada')
+"""
+    /////////////////////////////////////////////////////////////////////////////////
+
+    FUNCIONES AUXILIARES A LAS PRINCIPALES SOBRE SILEG VIEJO
+
+    /////////////////////////////////////////////////////////////////////////////////
 """
 
 def transform_name_to_new_model(d,c,cc):
@@ -52,27 +51,6 @@ def transform_name_to_new_model(d,c,cc):
     func = func + c
 
     return func    
-
-
-functions = []
-
-dnis = []
-
-dni_seleccionado = sys.argv[1]
-dsn = sys.argv[2]
-
-
-print('leyendo dnis')
-con = psycopg2.connect(dsn=dsn)
-try:
-    cur = con.cursor()
-    try:
-        cur.execute('select pers_nrodoc from empleado e left join persona p on (p.pers_id = e.empleado_pers_id)')
-        dnis = [str(d[0]) for d in cur]
-    finally:
-        cur.close()
-finally:
-    con.close()
 
 def cargar_lugares_y_catedras(cur, functions):
     """ carga dentro del cargo, la catedra y lugar de trbaajo asociados """
@@ -149,7 +127,7 @@ def cargar_prorrogas(cur, did, de, fs):
         fs.append(prorr)
         cargar_prorrogas(cur, prorr['id'], 'pro', fs)
 
-def cargar_extensiones(cur, did, fs):
+def cargar_extensiones(cur, did, fs, caracter_original, cargo_original):
     cur.execute("""select extension_id, tipodedicacion_nombre, dd.extension_catxmat_id, dd.extension_fecha_desde, dd.extension_fecha_hasta, 
                 r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
                 r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde,                            
@@ -165,7 +143,7 @@ def cargar_extensiones(cur, did, fs):
         eid = p[0]
         extension_ = {
             'eid': eid,
-            'funcion': transform_name_to_new_model(p[1], f['caracter_original'], f['cargo_original']),
+            'funcion': transform_name_to_new_model(p[1], caracter_original, cargo_original),
             'cxm': p[2],
             'desde': p[3],
             'hasta': p[4],
@@ -199,7 +177,7 @@ def cargar_licencias_cargo(cur, did, ls=[]):
     left join tipo_licencia tl on (tl.tipolicencia_id = l.licencia_tipolicencia_id) 
     where l.licencia_designacion_id = %s
     """, (did,))
-    for c in cur:
+    for c in cur.fetchall():
         lic = {
             'id': c[0],
             'desde': c[1],
@@ -220,7 +198,7 @@ def cargar_licencias_cargo(cur, did, ls=[]):
             'prorrogas': []
         }
         ls.append(lic)
-
+        cargar_prorrogas_de_licencia(cur, lic['id'], lic['prorrogas'])
 
 def cargar_prorrogas_de_licencia(cur, lid, prorrogas=[]):
     cur.execute("""select prorroga_id, prorroga_fecha_desde, prorroga_fecha_hasta, 
@@ -248,421 +226,425 @@ def cargar_prorrogas_de_licencia(cur, lid, prorrogas=[]):
             'cor_baja': c[10]
         }
         prorrogas.append(p)
-        cargar_prorrogas_de_licencia(cur, p['id'], prorrogas)
+        cargar_prorrogas(cur, p['id'], 'pro', prorrogas)
 
 
-def generar_cargo_original(cur, uid, fid, desig):
-    raise Exception('falta terminar')
-    """ genero el cargo y lo guardo en el modelo """
+"""
+    ////////////////////////////////////////////////////////
+    FUCION PRINCIPAL DE CARGA DE DATOS DEL SILEG VIEJO
+    ////////////////////////////////////////////////////////
+""" 
+
+
+def _leer_dnis_de_sileg_viejo(dsn):
+    dnis = []
+    con = psycopg2.connect(dsn=dsn)
+    try:
+        cur = con.cursor()
+        try:
+            cur.execute('select pers_nrodoc from empleado e left join persona p on (p.pers_id = e.empleado_pers_id)')
+            dnis = [str(d[0]) for d in cur]
+        finally:
+            cur.close()
+    finally:
+        con.close()    
+    return dnis
+
+def cargar_datos(dsn, dni):
+    """
+        obtiene la información de todas las designaciones,prorrogas,extensiones y licencias de la persona
+        desde el sileg antiguo
+    """
+    functions = []
+
+    con = psycopg2.connect(dsn=dsn)
+    try:
+        cur = con.cursor()
+        try:
+            cur.execute('select empleado_id from empleado e left join persona p on (p.pers_id = e.empleado_pers_id) where pers_nrodoc = %s', (dni,))
+            empleado_id = cur.fetchone()[0]
+            cargar_desig_orginales(cur, empleado_id, functions)
+            cargar_lugares_y_catedras(cur, functions)
+            
+            for f in functions:
+                #cargo la info de las prorrogas.
+                did = f['did']
+                f['prorrogas'] = []
+                cargar_prorrogas(cur, did, 'des', f['prorrogas'])
+
+                # cargo la info de las extensiones de cada cargo.
+                f['extensiones'] = []
+                cargar_extensiones(cur, did, f['extensiones'], f['caracter_original'], f['cargo_original'])
+                cargar_lugares_y_catedras(cur, f['extensiones'])
+                for e in f['extensiones']:
+                    #cargo la info de las prorrogas de extensión
+                    eid = e['eid']
+                    cargar_prorrogas(cur, eid, 'ext', e['prorrogas'])
+
+                # cargo ls licencias de las designaciones originales
+                f['licencias'] = []
+                cargar_licencias_cargo(cur, did, f['licencias'])
+
+        finally:
+            cur.close()
+    finally:
+        con.close()
+
+    return functions
+
+"""
+    /////////////////////////////////////////////////////////////////////////////////
+
+    FUNCIONES AUXILIARES A LAS PRINCIPALES SOBRE SILEG NUEVO!!!
+
+    /////////////////////////////////////////////////////////////////////////////////
+"""
+
+def _get_historic(d):
+    #return (d['res_baja'] is not None and d['res_baja'] != '') or (d['exp_baja'] is not None and d['exp_baja'] != '') or (d['cor_baja'] is not None and d['cor_baja'] != '')
+    return not (d['fecha_baja'] is None or d['fecha_baja'] > datetime.date.today())
+
+def _obtener_funcion_cargo(session, name):
+    """
+        Obtiene un objeto Function a partir de un nombre de cargo/función
+    """
+    fs = silegModel.get_functions_by_name(session, name)
+    if not fs or len(fs) <= 0:
+        #archivo.write(f"{dni};No se encuentra la función;{p['funcion']}\n")
+        #raise Exception(f"No se encuentra la fucion {p['funcion']}")
+        """ en el caso de que no exista el cargo, lo creo generado en el nuevo sileg """
+        fid = str(uuid.uuid4())
+        function = Function()
+        function.id = fid
+        function.type = FunctionTypes.DOCENTE
+        function.name = name
+        function.description = 'IMPORTADO SILEG'
+        session.add(function)
+        session.commit()
+        fs = silegModel.get_functions_by_name(session, name)
+    func = fs[0]
+    return func
+
+def _obtener_catedra(session, name):
+    """
+        obtiene el id de una catedra por nombre, en el caso de que no exista la crea
+    """
+    cs = silegModel.get_places_by_name(session, name)
+    if not cs or len(cs) <= 0:
+        pid = str(uuid.uuid4())
+        lugar = Place()
+        lugar.id = pid
+        lugar.name = name
+        lugar.type = PlaceTypes.CATEDRA
+        session.add(lugar)
+        session.commit()
+        cs = silegModel.get_places_by_name(session, name)
+    c = cs[0]
+    return c
+
+def _obtener_lugar(session, name):
+    """
+        obtiene el id de un lugar por nombre, en el caso de que no exista lo crea
+    """
+    cs = silegModel.get_places_by_name(session, name)
+    if not cs or len(cs) <= 0:
+        pid = str(uuid.uuid4())
+        lugar = Place()
+        lugar.id = pid
+        lugar.name = name
+        lugar.type = PlaceTypes.AREA
+        session.add(lugar)
+        session.commit()
+        cs = silegModel.get_places_by_name(session, name)
+    c = cs[0]
+    return c
+
+"""
+@event.listens_for(Session, 'after_transaction_create')
+def _pts(s, t):
+    print('transacción iniciada')
+
+@event.listens_for(Session, 'after_transaction_end')
+def _pte(s, t):
+    print('transacción finalizada')
+"""
+
+def _generar_baja(session, uid, designacion_id, function_id, place_id, desig):
+    """
+        Genera una baja de la designación asociada por designation_id
+    """
+    db = Designation()
+    db.type = DesignationTypes.DISCHARGE
+    db.end_type = DesignationEndTypes.INDETERMINATE
+    db.designation_id = designacion_id
+    db.user_id = uid
+    db.function_id = function_id
+    db.place_id = place_id
+    db.start = desig['fecha_baja']
+    db.res = desig['res_baja']
+    db.exp = desig['exp_baja']
+    db.cor = desig['cor_baja']
+    db.historic = True
+    db.comments = desig['baja_comments']
+    session.add(db)
+    session.commit()
+
+
+def _generar_prorrogas(session, uid, designacion_id, function_id, place_id, desig):
+    """
+        Genera las prorrogas necesarias dentro del nuevo modelo
+        desig = datos cargados del modelo viejo del sileg
+        function_id = id de cargo a configurar
+        place_id = id de lugar a configurar
+        designation_id = id de la designación original
+    """
+    for p in desig['prorrogas']:
+        historic = _get_historic(p)
+
+        prorroga_id = str(uuid.uuid4())
+        dp = Designation()
+        dp.id = prorroga_id
+        dp.type = DesignationTypes.EXTENSION
+        dp.end_type = DesignationEndTypes.INDETERMINATE        
+        dp.user_id = uid
+        dp.function_id = function_id
+        dp.place_id = place_id
+        dp.designation_id = designacion_id
+        dp.res = p['res']
+        dp.exp = p['exp']
+        dp.cor = p['cor']
+        dp.start = p['desde']
+        dp.end = p['hasta']
+        dp.historic = historic
+        session.add(dp)
+        session.commit()
+
+        if historic:
+            _generar_baja(session, uid, prorroga_id, function_id, place_id, p)
+
+
+def _generar_extension_cargo_original(session, uid, designacion_id, function_id, place_id, extension):
+        """
+            Genera una extensión con sus prorrogas y bajas.
+            extension = datos cargados del sileg viejo
+            place_id = lugar de trabajo
+            function_id = cargo a desempeñar
+            designacion_id = designación original la cual se extiende
+            uid = id del usuario
+        """
+        extension_id = str(uuid.uuid4())
+        historic = _get_historic(extension)
+
+        dp = Designation()
+        dp.id = extension_id
+        dp.type = DesignationTypes.PROMOTION
+        dp.end_type = DesignationEndTypes.INDETERMINATE
+        dp.user_id = uid
+        dp.designation_id = designacion_id
+        dp.function_id = function_id
+        dp.place_id = place_id
+        dp.res = extension['res']
+        dp.cor = extension['cor']
+        dp.exp = extension['exp']
+        dp.start = extension['desde']
+        dp.end = extension['hasta']
+        dp.historic = historic
+        session.add(dp)
+        session.commit()
+
+        if historic:
+            _generar_baja(session, uid, extension_id, function_id, place_id, extension)
+    
+        if 'prorrogas' in extension and len(extension['prorrogas']) > 0:
+            _generar_prorrogas(session, uid, extension_id, function_id, place_id, extension)
+
+        return extension_id
+
+
+def _generar_cargo_original(session, uid, function_id, place_id, desig):
+    """
+        Genera una designación original.
+        session = sesión de sqlalchemy al sileg nuevo
+        uid = id del usuario
+        function_id = id del cargo a cumplir
+        place_id = id del lugar de trabajo de la designación.
+        desig = datos cargados de la designación del sileg anterior
+    """    
     designacion_id = str(uuid.uuid4())
+    historic = _get_historic(desig)
+
     d = Designation()
     d.id = designacion_id
-    d.function_id = fid
-    d.user_id = uid
     d.type = DesignationTypes.ORIGINAL
-    d.status = DesignationStatus.IMPORTED
     d.res = desig['res']
     d.exp = desig['exp']
     d.cor = desig['cor']
     d.start = desig['desde']
     d.end = desig['hasta']
     d.end_type = DesignationEndTypes.INDETERMINATE
-    d.place_id = c
-    d.historic = True if p['fecha_baja'] else False
+    d.user_id = uid
+    d.function_id = function_id
+    d.place_id = place_id
+    d.historic = historic
     session.add(d)
+    session.commit()
 
-def generar_prorrogas(cur, uid, did, prorrogas):
-    raise Exception('falta terminar')
+    if historic:
+        _generar_baja(session, uid, designacion_id, function_id, place_id, desig)
+ 
+    if 'prorrogas' in desig and len(desig['prorrogas']) > 0:
+        _generar_prorrogas(session, uid, designacion_id, function_id, place_id, desig)
+
+    return designacion_id
 
 
-def _get_historic(d):
-    #return (d['res_baja'] is not None and d['res_baja'] != '') or (d['exp_baja'] is not None and d['exp_baja'] != '') or (d['cor_baja'] is not None and d['cor_baja'] != '')
-    return not (d['fecha_baja'] is None or d['fecha_baja'] > datetime.date.today())
 
 
 
 """
-    leo los dnis que ya fueron migrados.
+    /////////////////////////////////////////////////////////////////////////////////
+    FUNCTION PRINCIPAL PARA GENERAR LOS CARGOS DE UNA PERSONA DENTRO DEL MODELO NUEVO
+    /////////////////////////////////////////////////////////////////////////////////
 """
-dnis_ya_migrados = []
-with open('migracion-cargos-sileg.csv','r') as archivo:
-    for l in archivo:
-        dni = l.split(';')[0]
-        if dni not in dnis_ya_migrados:
-            print(f"agregando dni {dni} a la lista de migrados")
-            dnis_ya_migrados.append(dni)
+def generar_cargos(silegSession, functions, uid, dni):
+    """
+        genera todos los cargos, extensiones, prorrogas y licencias de una persona.
+    """
+
+    for function in functions:
+        cargo = _obtener_funcion_cargo(silegSession, function['funcion'])
+        if 'lugar' in function and function['lugar']:
+            lugar = _obtener_lugar(silegSession, function['lugar'])
+        elif 'catedra' in function and function['catedra']:
+            lugar = _obtener_catedra(silegSession, function['catedra'])            
+        if not lugar:
+            raise Exception(f'No se encuentra lugar de trabajo para {uid} {dni}')
         
+        """ genero la designacion con todas sus prorrogas y bajas """
+        did = _generar_cargo_original(silegSession, uid, cargo, lugar, function)
 
-with open('migracion-cargos-sileg.csv','a') as archivo:
+        """ 
+            genero las extensiones de la designacion original, con sus prorrogas y bajas 
+        """
+        if 'extensiones' in function and len(function['extensiones']) > 0:
+            for extension in function['extensiones']:
+                ecargo = _obtener_funcion_cargo(silegSession, extension['funcion'])
+                ecatedra = None
+                if 'catedra' in extension and extension['catedra']:
+                    ecatedra = _obtener_catedra(silegSession, extension['catedra'])
+                elugar = None
+                if 'lugar' in extension and extension['lugar']:
+                    elugar = _obtener_lugar(silegSession, extension['lugar'])
+                if not lugar:
+                    raise Exception(f'No se encuentra lugar de trabajo de la extension para {uid} {dni}')
+
+                """
+                    TEMA IMPORTANTE A ANALIZAR.
+                    SILEG VIEJO PERMITE ASOCIAR UNA DESIGNACION A 2 LUGARES A LA VEZ. (MATERIA, AREA)
+                    EN EL NUEVO NO SE PERMITE (ES REDUNDANTE E INCORRECTO)
+                    ASI QUE SE GENERA LA EXTENSIÓN DENTRO DEL LUGAR QUE DIFIERE DEL CARGO ORIGINAL
+                """
+                elugar_asociado = None
+                if ecatedra and not elugar:
+                    elugar_asociado = ecatedra
+                if elugar and not ecatedra:
+                    elugar_asociado = elugar
+                if ecatedra and elugar:
+                    if ecatedra == lugar:
+                        elugar_asociado = elugar
+                    elif elugar == lugar:
+                        elugar_asociado = ecatedra
+                    else:
+                        """ en el caso de que no se pueda determinar se le da prioridad al lugar """
+                        elugar_asociado = elugar
+
+                """ ahora si con los datos genero el arbol de extension """
+                _generar_extension_cargo_original(silegSession, uid, did, ecargo, elugar_asociado, extension)
+
+
+        """ TODO: FALTA GENERAR LAS LICENCIAS """
+
+
+"""
+    /////////////////////////////////////////////////7
+    FUNCIONES AUXILIARES A LA OPERATORIA DEL SCRIPT
+    ///////////////////////////////////////////////////
+"""
+
+def _eliminar_designaciones_anteriores(session, uid):
+    try:
+        """ elimino fisicamente todas las designaciones de la persona referenciada """
+        session.query(Designation).filter(Designation.user_id == uid).delete()
+        session.commit()
+    except Exception as e:
+        pass
+
+def _buscar_usuario_uid(dni):
+    with open_users_session() as session:
+        uid = UsersModel.get_uid_person_number(session, dni)
+        if not uid:
+            raise Exception(f'no se encuentra uid para el dni {dni}')
+    return uid
+
+def _leer_dnis_ya_procesados():
+    """
+        leo los dnis que ya fueron migrados.
+    """
+    dnis_ya_migrados = []
+    with open('migracion-cargos-sileg.csv','r') as archivo:
+        for l in archivo:
+            dni = l.split(';')[0]
+            if dni not in dnis_ya_migrados:
+                print(f"agregando dni {dni} a la lista de migrados")
+                dnis_ya_migrados.append(dni)
+    return dnis_ya_migrados
+
+def _dump_de_funciones_json(functions):
     with open('cargos-leidos.csv', 'a') as acargos:
-        acargos.write('[')
-
-        cantidad_total = len(dnis)
-        cantidad_actual = 0
-
-        ''' si se pone 1 como dni se migran todos los dnis '''
-        if dni_seleccionado != '1':
-            dnis = [dni_seleccionado]
-            dnis_ya_migrados = []
-
-        for dni in dnis:
-            functions = []
-            cantidad_actual = cantidad_actual + 1
-            print(f"DNI: {dni} -- {cantidad_actual}/{cantidad_total}")
-
-            if dni in dnis_ya_migrados:
-                continue
-
-            con = psycopg2.connect(dsn=dsn)
-            try:
-                cur = con.cursor()
-                try:
-                    cur.execute('select empleado_id from empleado e left join persona p on (p.pers_id = e.empleado_pers_id) where pers_nrodoc = %s', (dni,))
-                    empleado_id = cur.fetchone()[0]
-                    cargar_desig_orginales(cur, empleado_id, functions)
-                    cargar_lugares_y_catedras(cur, functions)
-                    
-                    for f in functions:
-                        #cargo la info de las prorrogas.
-                        did = f['did']
-                        f['prorrogas'] = []
-                        cargar_prorrogas(cur, did, 'des', f['prorrogas'])
-
-                        # cargo la info de las extensiones de cada cargo.
-                        f['extensiones'] = []
-                        cargar_extensiones(cur, did, f['extensiones'])
-                        cargar_lugares_y_catedras(cur, f['extensiones'])
-                        for e in f['extensiones']:
-                            #cargo la info de las prorrogas de extensión
-                            eid = e['eid']
-                            cargar_prorrogas(cur, eid, 'ext', e['prorrogas'])
-
-                finally:
-                    cur.close()
-            finally:
-                con.close()
-
-
-            print('escribiendo cargos')
-            acargos.write(json.dumps(functions, default=json_serial))
-            acargos.write(',')
-
-            print('buscando usuario')
-            with open_users_session() as s2:
-                uid = UsersModel.get_uid_person_number(s2, dni)
-                if not uid:
-                    archivo.write(f'{dni}; No se encuentra un usuario con ese dni\n')
-                    raise Exception(f'no se encuentra uid para el dni {dni}')
-
-            print('generando')
-            silegModel = SilegModel()
-            with open_session(echo=False) as session:
-                try:
-                    """ elimino fisicamente todas las designaciones de la persona referenciada """
-                    """
-                    desigs = silegModel.get_designations_by_uuid(session, uid)
-                    ds = silegModel.get_designations(session, desigs, historic=True, deleted=True)
-                    a_eliminar = len(ds)
-                    eliminadas = 0
-                    for d_ in ds:
-                        eliminadas = eliminadas + 1
-                        print(f"{eliminadas}/{a_eliminar}")
-                        session.delete(d_)
-                    session.commit()
-                    ds = None
-                    """
-                    session.query(Designation).filter(Designation.user_id == uid).delete()
-                    session.commit()
-                except Exception as e:
-                    archivo.write(f"{dni};No se pudieron eliminar las designaciones")
-                    continue
-                    
-
-                print('designaciones eliminadas')
-                print('generando')
-
-                try:
-                    for p in functions:
-
-                        fs = silegModel.get_functions_by_name(session, p['funcion'])
-                        if not fs or len(fs) <= 0:
-                            #archivo.write(f"{dni};No se encuentra la función;{p['funcion']}\n")
-                            #raise Exception(f"No se encuentra la fucion {p['funcion']}")
-
-                            fid = str(uuid.uuid4())
-                            function = Function()
-                            function.id = fid
-                            function.type = FunctionTypes.DOCENTE
-                            function.name = p['funcion']
-                            function.description = 'IMPORTADO SILEG'
-                            session.add(function)
-                            session.commit()
-                            fs = silegModel.get_functions_by_name(session, p['funcion'])
-
-                        func = fs[0]
-
-                        c = None
-                        if 'catedra' in p and p['catedra']:
-                            cs = silegModel.get_places_by_name(session, p['catedra'])
-                            if not cs or len(cs) <= 0:
-                                #archivo.write(f"{dni};No se encuentra la cátedra;{p['catedra']}\n")
-                                #raise Exception(f"No se encuentra el lugar {p['catedra']}")
-
-                                pid = str(uuid.uuid4())
-                                lugar = Place()
-                                lugar.id = pid
-                                lugar.name = p['catedra']
-                                lugar.type = PlaceTypes.CATEDRA
-                                session.add(lugar)
-                                session.commit()
-                                cs = silegModel.get_places_by_name(session, p['catedra'])
-
-                            c = cs[0]
-                        
-                        if 'lugar' in p and p['lugar']:
-                            cs = silegModel.get_places_by_name(session, p['lugar'])
-                            if not cs or len(cs) <= 0:
-                                #archivo.write(f"{dni};No se encuentra el lugar;{p['lugar']}\n")
-                                #raise Exception(f"No se encuentra el lugar {p['lugar']}")
-
-                                pid = str(uuid.uuid4())
-                                lugar = Place()
-                                lugar.id = pid
-                                lugar.name = p['lugar']
-                                lugar.type = PlaceTypes.AREA
-                                session.add(lugar)
-                                session.commit()
-                                cs = silegModel.get_places_by_name(session, p['lugar'])
-
-                            c = cs[0]
-
-                        if not c:
-                            raise Exception(f'No se encuentra lugar de trabajo para {uid} {dni}')
-
-                        print(f"usuario {uid} funcion {func} lugar {c}")
-
-                        """ genero el cargo y lo guardo en el modelo """
-                        print(f"Generando cargo {func}")
-                        designacion_id = str(uuid.uuid4())
-                        d = Designation()
-                        d.id = designacion_id
-                        d.type = DesignationTypes.ORIGINAL
-                        d.res = p['res']
-                        d.exp = p['exp']
-                        d.cor = p['cor']
-                        d.start = p['desde']
-                        d.end = p['hasta']
-                        d.end_type = DesignationEndTypes.INDETERMINATE
-                        d.function_id = func
-                        d.user_id = uid
-                        d.place_id = c
-                        d.historic = _get_historic(p)
-                        session.add(d)
-                        session.commit()
-
-                        """ genero la baja en el caso de que tenga """
-                        if _get_historic(p):
-                            print("Generando baja de designacion")
-                            db = Designation()
-                            db.type = DesignationTypes.DISCHARGE
-                            db.designation_id = designacion_id
-                            db.user_id = uid
-                            db.function_id = func
-                            db.place_id = c
-                            db.start = p['fecha_baja']
-                            db.end_type = DesignationEndTypes.INDETERMINATE
-                            db.res = p['res_baja']
-                            db.exp = p['exp_baja']
-                            db.cor = p['cor_baja']
-                            db.historic = True
-                            db.comments = p['baja_comments']
-                            session.add(db)
-                            session.commit()
-
-                        """ genero las prorrogas y las almaceno dentro del modelo """
-                        for pp in p['prorrogas']:
-                            print(f"Generando prorroga {pp['desde']}")
-                            prorroga_id = str(uuid.uuid4())
-                            dp = Designation()
-                            dp.id = prorroga_id
-                            dp.type = DesignationTypes.EXTENSION
-                            dp.user_id = uid
-                            dp.designation_id = designacion_id
-                            dp.res = pp['res']
-                            dp.exp = pp['exp']
-                            dp.cor = pp['cor']
-                            dp.start = pp['desde']
-                            dp.end = pp['hasta']
-                            dp.end_type = DesignationEndTypes.INDETERMINATE
-                            dp.function_id = func
-                            dp.place_id = c
-                            dp.historic = _get_historic(pp)
-                            session.add(dp)
-                            session.commit()
-
-                            """ genero la baja de la prorroga en el caso de que tenga """
-                            if _get_historic(pp):
-                                print("generando baja de prorroga")
-                                db = Designation()
-                                db.type = DesignationTypes.DISCHARGE
-                                db.designation_id = prorroga_id
-                                db.user_id = uid
-                                db.function_id = func
-                                db.place_id = c
-                                db.start = pp['fecha_baja']
-                                db.end_type = DesignationEndTypes.INDETERMINATE
-                                db.res = pp['res_baja']
-                                db.exp = pp['exp_baja']
-                                db.cor = pp['cor_baja']
-                                db.historic = True
-                                db.comments = pp['baja_comments']
-                                session.add(db)
-                                session.commit()
-
-
-                        """ genero las extensiones y las almaceno dentro del modelo """
-                        for pp in p['extensiones']:
-
-                            """ busco el cargo """
-                            fs = silegModel.get_functions_by_name(session, pp['funcion'])
-                            if not fs or len(fs) <= 0:
-                                #archivo.write(f"{dni};No se encuentra la función;{pp['funcion']}")
-                                #raise Exception(f"No se encuentra la fucion {pp['funcion']}")
-
-                                fid = str(uuid.uuid4())
-                                function = Function()
-                                function.id = fid
-                                function.type = FunctionTypes.DOCENTE
-                                function.name = pp['funcion']
-                                function.description = 'IMPORTADO SILEG'
-                                session.add(function)
-                                session.commit()
-                                fs = silegModel.get_functions_by_name(session, pp['funcion'])
-
-                            funcex = fs[0]
-
-                            """ busco el lugar """
-                            if 'catedra' in pp and pp['catedra']:
-                                cs = silegModel.get_places_by_name(session, pp['catedra'])
-                                if not cs or len(cs) <= 0:
-                                    #archivo.write(f"{dni};No se encuentra la cátedra;{pp['catedra']}\n")
-                                    #raise Exception(f"No se encuentra el lugar {pp['catedra']}\n")
-
-                                    _pid = str(uuid.uuid4())
-                                    lugar = Place()
-                                    lugar.id = _pid
-                                    lugar.name = pp['catedra']
-                                    lugar.type = PlaceTypes.CATEDRA
-                                    session.add(lugar)
-                                    session.commit()
-                                    cs = silegModel.get_places_by_name(session, pp['catedra'])
-
-                            if 'lugar' in pp and pp['lugar']:
-                                cs = silegModel.get_places_by_name(session, pp['lugar'])
-                                if not cs or len(cs) <= 0:
-                                    #archivo.write(f"{dni};No se encuentra el lugar;{p['lugar']}\n")
-                                    #raise Exception(f"No se encuentra el lugar {p['lugar']}")
-
-                                    pid = str(uuid.uuid4())
-                                    lugar = Place()
-                                    lugar.id = pid
-                                    lugar.name = pp['lugar']
-                                    lugar.type = PlaceTypes.AREA
-                                    session.add(lugar)
-                                    session.commit()
-                                    cs = silegModel.get_places_by_name(session, pp['lugar'])
-
-                            cex = cs[0]
-
-                            print(f"Generando extension {pp['desde']}")
-                            extension_id = str(uuid.uuid4())
-                            dp = Designation()
-                            dp.id = extension_id
-                            dp.type = DesignationTypes.PROMOTION
-                            dp.user_id = uid
-                            dp.designation_id = designacion_id
-                            dp.res = pp['res']
-                            dp.cor = pp['cor']
-                            dp.exp = pp['exp']
-                            dp.start = pp['desde']
-                            dp.end = pp['hasta']
-                            dp.end_type = DesignationEndTypes.INDETERMINATE
-                            dp.function_id = funcex
-                            dp.place_id = cex
-                            dp.historic = _get_historic(pp)
-                            session.add(dp)
-                            session.commit()
-
-                            """ genero las bajas de las extensiones """
-                            if _get_historic(pp):
-                                print("Generando baja de extension")
-                                db = Designation()
-                                db.type = DesignationTypes.DISCHARGE
-                                db.designation_id = extension_id
-                                db.user_id = uid
-                                db.function_id = funcex
-                                db.place_id = cex                    
-                                db.start = pp['fecha_baja']
-                                db.end_type = DesignationEndTypes.INDETERMINATE
-                                db.res = pp['res_baja']
-                                db.exp = pp['exp_baja']
-                                db.cor = pp['cor_baja']
-                                db.historic = True
-                                db.comments = pp['baja_comments']
-                                session.add(db)
-                                session.commit()
-
-                            """ genero las prorrogas de las extensiones """
-
-                            for pe in pp['prorrogas']:
-                                print(f"Generando prorroga {pp['desde']}")
-                                eprorroga_id = str(uuid.uuid4())
-                                dpe = Designation()
-                                dpe.id = eprorroga_id
-                                dpe.type = DesignationTypes.EXTENSION
-                                dpe.user_id = uid
-                                dpe.designation_id = extension_id
-                                dpe.res = pe['res']
-                                dpe.cor = pe['cor']
-                                dpe.exp = pe['exp']
-                                dpe.start = pe['desde']
-                                dpe.end = pe['hasta']
-                                dpe.end_type = DesignationEndTypes.INDETERMINATE
-                                dpe.function_id = funcex
-                                dpe.place_id = cex
-                                dpe.historic = _get_historic(pe)
-                                session.add(dpe)
-                                session.commit()                    
-
-                                """ genero las bajas de las prorrogas de extension """
-                                if _get_historic(pe):
-                                    print(f"Generando baja de prorroga de extension")
-                                    db = Designation()
-                                    db.type = DesignationTypes.DISCHARGE
-                                    db.designation_id = eprorroga_id
-                                    db.user_id = uid
-                                    db.function_id = funcex
-                                    db.place_id = cex                    
-                                    db.start = pe['fecha_baja']
-                                    db.end_type = DesignationEndTypes.INDETERMINATE
-                                    db.res = pe['res_baja']
-                                    db.exp = pe['exp_baja']
-                                    db.cor = pe['cor_baja']                                
-                                    db.historic = True
-                                    db.comments = pe['baja_comments']
-                                    session.add(db)
-                                    session.commit()
-                    
-                        session.commit()
-                        if 'catedra' in p:
-                            archivo.write(f"{dni};{p['desde']};{p['hasta']};{p['funcion']};{p['catedra']};correctamente migrado\n")
-                        if 'lugar' in p:
-                            archivo.write(f"{dni};{p['desde']};{p['hasta']};{p['funcion']};{p['lugar']};correctamente migrado\n")
-
-                except Exception as e:
-                    archivo.write(f"{dni};{e}\n")
-                    logging.exception(e)
-
-            archivo.flush()
-
+        acargos.write(',[')
+        acargos.write(json.dumps(functions, default=json_serial))
         acargos.write(']')
+
+
+if __name__ == '__main__':
+
+    dsn = sys.argv[2]
+    dni_seleccionado = sys.argv[1]
+
+    if dni_seleccionado == '1':
+        dnis_ya_migrados = _leer_dnis_ya_procesados()
+        dnis = _leer_dnis_de_sileg_viejo(dsn)
+        dnis_a_procesar = [d for d in dnis if d not in dnis_ya_migrados]
+    else:
+        dnis_a_procesar = [dni_seleccionado]
+
+    cantidad_total = len(dnis_a_procesar)
+    cantidad_actual = 0
+
+    for dni in dnis_a_procesar:
+        """ imprimo una cabecera para iniciar el proceso """
+        cantidad_actual = cantidad_actual + 1
+        print(f"DNI: {dni} -- {cantidad_actual}/{cantidad_total}")
+        
+        """ cargo los datos del sileg antiguo """
+        functions = cargar_datos(dsn, dni)
+
+        print('escribiendo archivo intermedio de cargos')
+        _dump_de_funciones_json(functions)
+
+        print(f'buscando usuario {dni}')
+        uid = _buscar_usuario_uid(dni)
+
+        
+        silegModel = SilegModel()
+        with open_session(echo=False) as session:
+            try:
+                print(f'eliminando designaciones anteriores de {dni} - {uid}')
+                _eliminar_designaciones_anteriores(session, uid)
+                
+                print(f'generando información de cargos dentro de la base nueva para {dni} - {uid}')
+                generar_cargos(session, functions, uid, dni)
+       
+                session.commit()
+            except Exception as e:
+                logging.exception(e)
