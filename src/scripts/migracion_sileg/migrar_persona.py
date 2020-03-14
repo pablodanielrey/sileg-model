@@ -482,24 +482,15 @@ def _generar_cargo_original(session, uid, function_id, place_id, desig):
 
     d = Designation()
     d.id = designacion_id
-
-    """ TODO: generar metadatos """
-
-    if not desig['reemplazo_de_id']:
-        d.type = DesignationTypes.ORIGINAL
-        d.designation_id = None
-    else:
-        d.type = DesignationTypes.REPLACEMENT
-        ''' este dato va a ser generado por otro script verificando las designationlabels '''
-        d.designation_id = None
-
+    d.type = DesignationTypes.ORIGINAL
+    d.designation_id = None
     d.res = desig['res']
     d.exp = desig['exp']
     d.cor = desig['cor']
     d.start = desig['desde']
     d.end = desig['hasta']
     d.comments = desig['comentarios']
-    d.end_type = DesignationEndTypes.REPLACEMENT
+    d.end_type = DesignationEndTypes.INDETERMINATE
 
     d.user_id = uid
     d.function_id = function_id
@@ -512,7 +503,7 @@ def _generar_cargo_original(session, uid, function_id, place_id, desig):
         para el procesamiento de los reemplazos.
         se generan 2 etiquetas:
         sileg_viejo_id = id de la desig en sileg viejo
-        sileg_viejo_replacement = id de la designacion relacionada en sileg viejo
+        sileg_viejo_replacement = id de la designacion relacionada en sileg viejo que seria la que esta cubriendo el reemplazo
     """
     dl = DesignationLabel()
     dl.designation_id = designacion_id
@@ -732,7 +723,7 @@ def _eliminar_designaciones_anteriores(session, uid):
                    baja
                    prorroga -->
                       baja
-                      
+
         """
         pls = session.query(PersonalLeaveLicense).filter(PersonalLeaveLicense.user_id == uid).all()
         for l in pls:
