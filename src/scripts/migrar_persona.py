@@ -22,6 +22,7 @@ from sqlalchemy import event
 from sileg_model.model.entities.Place import Place, PlaceTypes
 from sileg_model.model.entities.Function import Function, FunctionTypes
 from sileg_model.model.entities.Designation import DesignationEndTypes, DesignationTypes, DesignationStatus, Designation
+from sileg_model.model.entities.LeaveLicense import LicenseEndTypes, LicenseTypes, DesignationLeaveLicense, PersonalLeaveLicense
 from sileg_model.model import open_session
 from sileg_model.model.SilegModel import SilegModel
 from users.model import open_session as open_users_session
@@ -182,7 +183,7 @@ def cargar_licencias_cargo(cur, did, ls=[]):
             'id': c[0],
             'desde': c[1],
             'hasta': c[2],
-            'baja': c[3],
+            'fecha_baja': c[3],
             'articulo': c[4],
             'goce': c[5],
             'res_alta': c[6],
@@ -497,7 +498,93 @@ def _generar_cargo_original(session, uid, function_id, place_id, desig):
 
     return designacion_id
 
+def _descripcion_licencia_a_tipo(desc):
+    if 'Renta Suspendida' in desc:
+        return LicenseTypes.SUSPENDED_PAYMENT
+    if 'Retención de Cargo' in desc:
+        return LicenseTypes.DESIGNATION_RETENTION
+    if 'Suspension Transitoria' in desc:
+        return LicenseTypes.TRANSITORY_SUSPENSION
+    if 'Licencia' in desc:
+        return LicenseTypes.LICENSE
+    if 'Art. 46' in desc:
+        return LicenseTypes.ART46
 
+def _generar_baja_licencia(session, licence_id, licence):
+    """
+        Genera una baja de una licencia
+    """
+    db = DesignationLeaveLicense()
+    db.type = LicenseTypes.DISCHARGE
+    db.end_type = LicenseEndTypes.LICENSE_END
+    db.designation_id = None
+    db.license_id = licence_id
+    
+    db.start = licence['fecha_baja']
+    db.res = licence['res_baja']
+    db.exp = licence['exp_baja']
+    db.cor = licence['cor_baja']
+    db.historic = True
+    session.add(db)
+    session.commit()
+
+def _generar_prorrogas_licencia(session, licencia_id, licencia):
+    """
+        Genera las prorrogas necesarias dentro del nuevo modelo
+    """
+    for p in licencia['prorrogas']:
+        historic = _get_historic(p)
+
+        prorroga_id = str(uuid.uuid4())
+        dp = DesignationLeaveLicense()
+        dp.id = prorroga_id
+        dp.license_id = licencia_id
+        dp.designation_id = None
+        dp.type = LicenseTypes.EXTENSION
+        dp.end_type = LicenseEndTypes.INDETERMINATE
+
+        dp.res = p['res']
+        dp.exp = p['exp']
+        dp.cor = p['cor']
+        dp.start = p['desde']
+        dp.end = p['hasta']
+        dp.historic = historic
+        session.add(dp)
+        session.commit()
+
+        if historic:
+            _generar_baja_licencia(session, prorroga_id, p)
+
+
+def _generar_licencia_cargo_original(session, designacion_id, licencia):
+        """
+            Genero una licencia de la designacion
+        """
+        lid = str(uuid.uuid4())
+        historic = _get_historic(licencia)
+
+        dp = DesignationLeaveLicense()
+        dp.id = lid
+        dp.type = _descripcion_licencia_a_tipo(licencia['tipo_lic'])
+        dp.end_type = LicenseEndTypes.INDETERMINATE
+        
+        dp.designation_id = designacion_id
+        dp.res = licencia['res']
+        dp.cor = licencia['cor']
+        dp.exp = licencia['exp']
+        dp.start = licencia['desde']
+        dp.end = licencia['hasta']
+        dp.historic = historic
+        session.add(dp)
+        session.commit()
+
+        if historic:
+            _generar_baja_licencia(session, lid, licencia)
+    
+        if 'prorrogas' in licencia and len(licencia['prorrogas']) > 0:
+            _generar_prorrogas_licencia(session, lid, licencia)
+
+        return lid
 
 
 
@@ -562,7 +649,14 @@ def generar_cargos(silegSession, functions, uid, dni):
                 _generar_extension_cargo_original(silegSession, uid, did, ecargo, elugar_asociado, extension)
 
 
-        """ TODO: FALTA GENERAR LAS LICENCIAS """
+        """
+            genero las licencias del cargo original
+        """
+        if 'licencias' in function and len(function['licencias']) > 0:
+            for license in function['licencias']:
+                print(f"generando licencia {did} - {license['tipo_lic']}")
+                _generar_licencia_cargo_original(silegSession, did, license)
+
 
 
 """
@@ -601,9 +695,11 @@ def _leer_dnis_ya_procesados():
 
 def _dump_de_funciones_json(functions):
     with open('cargos-leidos.csv', 'a') as acargos:
-        acargos.write(',[')
+        dni = functions[0]['dni']
+        acargos.write('{')
+        acargos.write(f'"{dni}":')
         acargos.write(json.dumps(functions, default=json_serial))
-        acargos.write(']')
+        acargos.write('}')
 
 
 if __name__ == '__main__':

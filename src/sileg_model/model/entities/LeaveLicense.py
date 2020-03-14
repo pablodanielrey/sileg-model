@@ -170,6 +170,7 @@ class LicenseTypes(Enum):
     LICENSE = 'LICENSE'
     EXTENSION = 'EXTENSION'
     DISCHARGE = 'DISCHARGE'
+    ART46 = 'ART46'
 
 """
 Esto es lo que se encuentra en la base pero me suena a que es una baja de cargo, no un tipo de fin de licencia!!.
@@ -197,13 +198,14 @@ class PersonalLeaveLicense(Base):
     end = Column(Date)
     end_type = Column(SQLEnum(LicenseEndTypes))
 
-    historic = Boolean
+    historic = Column(Boolean, default=False)
 
     exp = Column(String)
     res = Column(String)
     cor = Column(String)
 
     comments = Column(String)
+    perceive_salary = Column(Boolean, default=False)
 
 
 class DesignationLeaveLicense(Base):
@@ -217,8 +219,9 @@ class DesignationLeaveLicense(Base):
 
     start = Column(Date)
     end = Column(Date)
+    end_type = Column(SQLEnum(LicenseEndTypes))
 
-    historic = Boolean
+    historic = Column(Boolean, default=False)
 
     exp = Column(String)
     res = Column(String)
@@ -227,3 +230,5 @@ class DesignationLeaveLicense(Base):
     type = Column(SQLEnum(LicenseTypes))
 
     comments = Column(String)
+
+    perceive_salary = Column(Boolean, default=False)
