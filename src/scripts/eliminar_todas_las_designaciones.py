@@ -3,6 +3,7 @@ import os
 import psycopg2
 
 from sileg_model.model.entities.Designation import Designation
+from sileg_model.model.entities.LeaveLicense import PersonalLeaveLicense, DesignationLeaveLicense
 from sileg_model.model import open_session
 from sileg_model.model.SilegModel import SilegModel
 from users.model import open_session as open_users_session
@@ -31,7 +32,6 @@ if __name__ == '__main__':
             with open_users_session() as s2:
                 uid = UsersModel.get_uid_person_number(s2, dni)
                 if not uid:
-                    archivo.write(f'{dni}; No se encuentra un usuario con ese dni\n')
                     raise Exception(f'no se encuentra uid para el dni {dni}')
 
             silegModel = SilegModel()
@@ -39,6 +39,19 @@ if __name__ == '__main__':
                 try:
                     """ elimino fisicamente todas las designaciones de la persona referenciada """
                     print(f"eliminando designaciones {dni}")
+                    for p in session.query(PersonalLeaveLicense.id).filter(PersonalLeaveLicense.user_id == uid).all():
+                        session.query(PersonalLeaveLicense).filter(PersonalLeaveLicense.license_id == p.id).delete()
+                    session.commit()
+                    session.query(PersonalLeaveLicense).filter(PersonalLeaveLicense.user_id == uid).delete()
+                    session.commit()
+
+                    for d in session.query(Designation.id).filter(Designation.user_id == uid).all():
+                        for dd in session.query(DesignationLeaveLicense.id).filter(DesignationLeaveLicense.designation_id == d.id).all():
+                            session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.license_id == dd.id).delete()
+                            session.commit()
+                        session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.designation_id == d.id).delete()
+                        session.commit()
+                        
                     session.query(Designation).filter(Designation.user_id == uid).delete()
                     session.commit()
                 except Exception as e:

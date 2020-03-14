@@ -71,7 +71,10 @@ def cargar_desig_orginales(cur, empleado_id, functions):
     cur.execute("""select desig_id, tipodedicacion_nombre, tipocaracter_nombre, tipocargo_nombre, dd.desig_catxmat_id, dd.desig_fecha_desde, dd.desig_fecha_hasta, 
                 r.resolucion_numero, r.resolucion_expediente, r.resolucion_corresponde,
                 dd.desig_fecha_baja, r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde, tb.tipobajadesig_nombre,
-                dd.desig_lugdetrab_id 
+                dd.desig_lugdetrab_id,
+                dd.desig_reempa,
+                dd.observaciones,
+                dd.convalidado
                 from designacion_docente dd 
                 left join resolucion r on (dd.desig_resolucionalta_id = r.resolucion_id)
                 left join resolucion r2 on (dd.desig_resolucionbaja_id = r2.resolucion_id)
@@ -97,7 +100,10 @@ def cargar_desig_orginales(cur, empleado_id, functions):
             'exp_baja': p[12],
             'cor_baja': p[13],
             'baja_comments': p[14],
-            'lugar_id':p[15]
+            'lugar_id': p[15],
+            'reemplazo_de_id': p[16],
+            'commentarios': p[17],
+            'convalidada': p[18]
         })
 
 def cargar_prorrogas(cur, did, de, fs):
@@ -476,13 +482,24 @@ def _generar_cargo_original(session, uid, function_id, place_id, desig):
 
     d = Designation()
     d.id = designacion_id
-    d.type = DesignationTypes.ORIGINAL
+
+    """ TODO: generar metadatos """
+
+    if not desig['reemplazo_de_id']:
+        d.type = DesignationTypes.ORIGINAL
+        d.designation_id = None
+    else:
+        d.type = DesignationEndTypes.REPLACEMENT
+        d.designation_id = 
+
     d.res = desig['res']
     d.exp = desig['exp']
     d.cor = desig['cor']
     d.start = desig['desde']
     d.end = desig['hasta']
+    d.comments = desig['comentarios']
     d.end_type = DesignationEndTypes.INDETERMINATE
+
     d.user_id = uid
     d.function_id = function_id
     d.place_id = place_id
