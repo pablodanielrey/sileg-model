@@ -21,7 +21,7 @@ from sqlalchemy import event
 
 from sileg_model.model.entities.Place import Place, PlaceTypes
 from sileg_model.model.entities.Function import Function, FunctionTypes
-from sileg_model.model.entities.Designation import DesignationEndTypes, DesignationTypes, DesignationStatus, Designation
+from sileg_model.model.entities.Designation import DesignationEndTypes, DesignationTypes, DesignationStatus, Designation, DesignationLabel
 from sileg_model.model.entities.LeaveLicense import LicenseEndTypes, LicenseTypes, DesignationLeaveLicense, PersonalLeaveLicense
 from sileg_model.model import open_session
 from sileg_model.model.SilegModel import SilegModel
@@ -490,7 +490,8 @@ def _generar_cargo_original(session, uid, function_id, place_id, desig):
         d.designation_id = None
     else:
         d.type = DesignationEndTypes.REPLACEMENT
-        d.designation_id = 
+        ''' este dato va a ser generado por otro script verificando las designationlabels '''
+        d.designation_id = None
 
     d.res = desig['res']
     d.exp = desig['exp']
@@ -498,13 +499,35 @@ def _generar_cargo_original(session, uid, function_id, place_id, desig):
     d.start = desig['desde']
     d.end = desig['hasta']
     d.comments = desig['comentarios']
-    d.end_type = DesignationEndTypes.INDETERMINATE
+    d.end_type = DesignationEndTypes.REPLACEMENT
 
     d.user_id = uid
     d.function_id = function_id
     d.place_id = place_id
     d.historic = historic
     session.add(d)
+    session.commit()
+
+    """
+        para el procesamiento de los reemplazos.
+        se generan 2 etiquetas:
+        sileg_viejo_id = id de la desig en sileg viejo
+        sileg_viejo_replacement = id de la designacion relacionada en sileg viejo
+    """
+    dl = DesignationLabel()
+    dl.designation_id = designacion_id
+    dl.id = str(uuid.uuid4())
+    dl.name = 'sileg_viejo_id'
+    dl.value = desig['did']
+    session.add(dl)
+
+    if desig['reemplazo_de_id']:
+        dl = DesignationLabel()
+        dl.designation_id = designacion_id
+        dl.id = str(uuid.uuid4())
+        dl.name = 'sileg_viejo_replacement'
+        dl.value = desig['reemplazo_de_id']
+        session.add(dl)
     session.commit()
 
     if historic:

@@ -62,6 +62,7 @@ class DesignationStatus(Enum):
     
 
 
+
 class Designation(Base):
 
     __tablename__ = 'designations'
@@ -106,6 +107,18 @@ class Designation(Base):
 Designation.designations = relationship('Designation', backref=backref('designation', remote_side=[Designation.id]))
 Function.designations = relationship('Designation', back_populates='function')
 Place.designations = relationship('Designation', back_populates='place')
+
+
+class DesignationLabel(Base):
+
+    __tablename__ = 'designation_labels'
+
+    designation_id = Column(String, ForeignKey('designations.id'))
+    name = Column(String)
+    value = Column(String)
+
+
+
 
 """
 class BajaDesignacion(Designacion):
