@@ -73,8 +73,8 @@ def cargar_desig_orginales(cur, empleado_id, functions):
                 dd.desig_fecha_baja, r2.resolucion_numero, r2.resolucion_expediente, r2.resolucion_corresponde, tb.tipobajadesig_nombre,
                 dd.desig_lugdetrab_id,
                 dd.desig_reempa,
-                dd.observaciones,
-                dd.convalidado
+                dd.desig_observaciones,
+                dd.desig_convalidado
                 from designacion_docente dd 
                 left join resolucion r on (dd.desig_resolucionalta_id = r.resolucion_id)
                 left join resolucion r2 on (dd.desig_resolucionbaja_id = r2.resolucion_id)
@@ -102,7 +102,7 @@ def cargar_desig_orginales(cur, empleado_id, functions):
             'baja_comments': p[14],
             'lugar_id': p[15],
             'reemplazo_de_id': p[16],
-            'commentarios': p[17],
+            'comentarios': p[17],
             'convalidada': p[18]
         })
 
@@ -709,6 +709,7 @@ def generar_cargos(silegSession, functions, uid, dni):
     ///////////////////////////////////////////////////
 """
 
+
 def _eliminar_designaciones_anteriores(session, uid):
     try:
         """ elimino fisicamente todas las designaciones de la persona referenciada """
@@ -724,6 +725,8 @@ def _eliminar_designaciones_anteriores(session, uid):
             ls = session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.designation_id == d.id).all()
             for l in ls:
                 ''' elimino las prorrogas que tenga esa licencia '''
+                rdids = [d.id for d in session.query(DesignationLeaveLicense.id).filter(DesignationLeaveLicense.designation_id == l.id).all()]
+                session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.designation_id.in_(rdids)).delete()
                 session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.designation_id == l.id).delete()
                 session.delete(l)
             session.delete(d)
