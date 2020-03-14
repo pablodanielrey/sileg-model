@@ -186,9 +186,9 @@ def cargar_licencias_cargo(cur, did, ls=[]):
             'fecha_baja': c[3],
             'articulo': c[4],
             'goce': c[5],
-            'res_alta': c[6],
-            'exp_alta': c[7],
-            'cor_alta': c[8],
+            'res': c[6],
+            'exp': c[7],
+            'cor': c[8],
             'res_baja': c[9],
             'exp_baja': c[10],
             'cor_baja': c[11],
@@ -217,11 +217,11 @@ def cargar_prorrogas_de_licencia(cur, lid, prorrogas=[]):
             'id': c[0],
             'desde': c[1],
             'hasta': c[2],
-            'baja': c[3],
+            'fecha_baja': c[3],
             'tipo_baja': c[4],
-            'res_alta': c[5],
-            'exp_alta': c[6],
-            'cor_alta': c[7],
+            'res': c[5],
+            'exp': c[6],
+            'cor': c[7],
             'res_baja': c[8],
             'exp_baja': c[9],
             'cor_baja': c[10]
@@ -498,6 +498,10 @@ def _generar_cargo_original(session, uid, function_id, place_id, desig):
 
     return designacion_id
 
+"""
+    /////// LICENCIAS /////////////
+"""
+
 def _descripcion_licencia_a_tipo(desc):
     if 'Renta Suspendida' in desc:
         return LicenseTypes.SUSPENDED_PAYMENT
@@ -668,10 +672,26 @@ def generar_cargos(silegSession, functions, uid, dni):
 def _eliminar_designaciones_anteriores(session, uid):
     try:
         """ elimino fisicamente todas las designaciones de la persona referenciada """
-        session.query(Designation).filter(Designation.user_id == uid).delete()
+        pls = session.query(PersonalLeaveLicense).filter(PersonalLeaveLicense.user_id == uid).all()
+        for l in pls:
+            ''' elimino las prorrogas de la designacion '''
+            session.query(PersonalLeaveLicense).filter(PersonalLeaveLicense.license_id == l.id).delete()
+            session.delete(l)
+
+        desigs = session.query(Designation).filter(Designation.user_id == uid).all()
+        for d in desigs:
+            ''' elimino las licencias que tenga '''
+            ls = session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.designation_id == d.id).all()
+            for l in ls:
+                ''' elimino las prorrogas que tenga esa licencia '''
+                session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.designation_id == l.id).delete()
+                session.delete(l)
+            session.delete(d)
         session.commit()
     except Exception as e:
-        pass
+        print(e)
+        logging.exception(e)
+
 
 def _buscar_usuario_uid(dni):
     with open_users_session() as session:
@@ -740,7 +760,7 @@ if __name__ == '__main__':
                 
                 print(f'generando información de cargos dentro de la base nueva para {dni} - {uid}')
                 generar_cargos(session, functions, uid, dni)
-       
-                session.commit()
+
             except Exception as e:
+                print(e)
                 logging.exception(e)
