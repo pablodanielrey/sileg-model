@@ -118,7 +118,9 @@ class DesignationAdjusted(Base):
     designation_id = Column(String, ForeignKey('designations.id'))
     start = Column(Date)
     end = Column(Date)
-
+    exp = Column(String)
+    res = Column(String)
+    cor = Column(String)
 
 class DesignationLabel(Base):
 

@@ -21,7 +21,7 @@ from sqlalchemy import event
 
 from sileg_model.model.entities.Place import Place, PlaceTypes
 from sileg_model.model.entities.Function import Function, FunctionTypes
-from sileg_model.model.entities.Designation import DesignationEndTypes, DesignationTypes, DesignationStatus, Designation, DesignationLabel
+from sileg_model.model.entities.Designation import DesignationEndTypes, DesignationTypes, DesignationStatus, Designation, DesignationLabel, DesignationAdjusted, DesignationConvalidation
 from sileg_model.model.entities.LeaveLicense import LicenseEndTypes, LicenseTypes, DesignationLeaveLicense, PersonalLeaveLicense
 from sileg_model.model import open_session
 from sileg_model.model.SilegModel import SilegModel
@@ -74,14 +74,18 @@ def cargar_desig_orginales(cur, empleado_id, functions):
                 dd.desig_lugdetrab_id,
                 dd.desig_reempa,
                 dd.desig_observaciones,
-                dd.desig_convalidado
+                dd.desig_convalidado,
+                dd.desig_ord_esajust, desig_ord_fdesde, desig_ord_fhasta,
+                r3.resolucion_numero, r3.resolucion_expediente, r3.resolucion_corresponde
                 from designacion_docente dd 
                 left join resolucion r on (dd.desig_resolucionalta_id = r.resolucion_id)
                 left join resolucion r2 on (dd.desig_resolucionbaja_id = r2.resolucion_id)
                 left join tipo_baja tb on (dd.desig_tipobaja_id = tb.tipobajadesig_id)
                 left join tipo_dedicacion td on (dd.desig_tipodedicacion_id = td.tipodedicacion_id) 
                 left join tipo_caracter tc on (dd.desig_tipocaracter_id = tc.tipocaracter_id) 
-                left join tipo_cargo tcc on (dd.desig_tipocargo_id = tcc.tipocargo_id) where dd.desig_empleado_id = %s""", (empleado_id,))
+                left join tipo_cargo tcc on (dd.desig_tipocargo_id = tcc.tipocargo_id) 
+                left join resolucion r3 on (dd.desig_resolucionord_id = r3.resolucion_id) where dd.desig_empleado_id = %s""", (empleado_id,))
+
     for p in cur.fetchall():
         functions.append({
             'dni':dni,
@@ -103,7 +107,13 @@ def cargar_desig_orginales(cur, empleado_id, functions):
             'lugar_id': p[15],
             'reemplazo_de_id': p[16],
             'comentarios': p[17],
-            'convalidada': p[18]
+            'convalidada': p[18],
+            'ord': p[19],
+            'ord_desde': p[20],
+            'ord_hasta': p[21],
+            'ord_res': p[22],
+            'ord_exp': p[23],
+            'ord_cor': p[24]
         })
 
 def cargar_prorrogas(cur, did, de, fs):
@@ -498,6 +508,32 @@ def _generar_cargo_original(session, uid, function_id, place_id, desig):
     d.historic = historic
     session.add(d)
     session.commit()
+
+    """
+        ver la convalidación
+    """
+    if desig['convalidada']:
+        dc = DesignationConvalidation()
+        dc.id = str(uuid.uuid4())
+        dc.designation_id = designacion_id
+        dc.convalidation = desig['convalidada']
+        session.add(dc)
+        session.commit()
+        
+    """
+        ajustada a la ordenanza
+    """
+    if desig['ord']:
+        da = DesignationAdjusted()
+        da.id = str(uuid.uuid4())
+        da.designation_id = designacion_id
+        da.exp = desig['ord_exp']
+        da.res = desig['ord_res']
+        da.cor = desig['ord_cor']
+        da.start = desig['ord_desde']
+        da.end = desig['ord_hasta']
+        session.add(da)
+        session.commit()
 
     """
         para el procesamiento de los reemplazos.
