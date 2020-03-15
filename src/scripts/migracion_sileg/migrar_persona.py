@@ -764,6 +764,7 @@ def _eliminar_designaciones_anteriores(session, uid):
                 session.delete(dp)
                 session.commit()
 
+            print(f'eliminando la designacion original {d.id}')
             session.delete(d)
             session.commit()
 
