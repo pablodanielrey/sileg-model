@@ -794,12 +794,13 @@ def _leer_dnis_ya_procesados():
     return dnis_ya_migrados
 
 def _dump_de_funciones_json(functions):
-    with open('cargos-leidos.csv', 'a') as acargos:
-        dni = functions[0]['dni']
-        acargos.write('{')
-        acargos.write(f'"{dni}":')
-        acargos.write(json.dumps(functions, default=json_serial))
-        acargos.write('}')
+    if functions and len(functions) > 0:
+        with open('cargos-leidos.csv', 'a') as acargos:
+            dni = functions[0]['dni']
+            acargos.write('{')
+            acargos.write(f'"{dni}":')
+            acargos.write(json.dumps(functions, default=json_serial))
+            acargos.write('}')
 
 
 if __name__ == '__main__':
@@ -808,7 +809,8 @@ if __name__ == '__main__':
     dni_seleccionado = sys.argv[1]
 
     if dni_seleccionado == '1':
-        dnis_ya_migrados = _leer_dnis_ya_procesados()
+        #dnis_ya_migrados = _leer_dnis_ya_procesados()
+        dnis_ya_migrados = []
         dnis = _leer_dnis_de_sileg_viejo(dsn)
         dnis_a_procesar = [d for d in dnis if d not in dnis_ya_migrados]
     else:
