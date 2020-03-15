@@ -59,8 +59,6 @@ class DesignationStatus(Enum):
     APROVED = 'APROVED'
     EFFECTIVE = 'EFFECTIVE'
     IMPORTED = 'IMPORTED'
-    
-
 
 
 class Designation(Base):
@@ -80,9 +78,12 @@ class Designation(Base):
     status = Column(SQLEnum(DesignationStatus))
 
     type = Column(SQLEnum(DesignationTypes))
-    #categorias = relationship('CategoriaDesignacion', secondary=categoria_designacion_table, back_populates='designaciones')
 
     labels = relationship('DesignationLabel', cascade="all, delete")
+
+    """ solo para las designaciones docentes. hay que analizar si esta correcto hacerlo aca """
+    convalidation = relationship('DesignationConvalidation', cascade="all, delete")
+    adjusted = relationship('DesignationAdjusted', cascade="all, delete")
 
     designation_id = Column(String, ForeignKey('designations.id'))
 
@@ -94,21 +95,29 @@ class Designation(Base):
     place_id = Column(String, ForeignKey('places.id'))
     place = relationship('Place', back_populates='designations')
 
-    #caracter_id = Column(String, ForeignKey('caracter.id'))
-    #caracter = relationship('Caracter', back_populates='tipos_caracter')
-
     comments = Column(String)
 
-    """
-    _mapper_args__ = {
-        'polymorphic_on':tipo,
-        'polymorphic_identity':'designacion'
-    }
-    """
 
 Designation.designations = relationship('Designation', backref=backref('designation', remote_side=[Designation.id]))
 Function.designations = relationship('Designation', back_populates='function')
 Place.designations = relationship('Designation', back_populates='place')
+
+
+class DesignationConvalidation(Base):
+
+    __tablename__ = 'designation_convalidations'
+
+    designation_id = Column(String, ForeignKey('designations.id'))
+    convalidation = Column(Date)
+    
+
+class DesignationAdjusted(Base):
+
+    __tablename__ = 'designation_adjusts'
+
+    designation_id = Column(String, ForeignKey('designations.id'))
+    start = Column(Date)
+    end = Column(Date)
 
 
 class DesignationLabel(Base):
@@ -118,24 +127,3 @@ class DesignationLabel(Base):
     designation_id = Column(String, ForeignKey('designations.id'))
     name = Column(String)
     value = Column(String)
-
-
-
-
-"""
-class BajaDesignacion(Designacion):
-    __mapper_args__ = {
-        'polymorphic_identity':'baja'
-    }
-
-class CategoriaDesignacion(Base):
-
-    __tablename__ = 'categoria'
-
-    nombre = Column(String, unique=True)
-
-    designaciones = relationship('Designacion', secondary=categoria_designacion_table, back_populates='categorias')
-
-    old_id = Column(String)
-
-"""

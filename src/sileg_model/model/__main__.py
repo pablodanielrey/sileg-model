@@ -3,7 +3,7 @@ def create_tables():
     import os
     from sqlalchemy import create_engine
     from .entities.Function import Function, FunctionTypes
-    from .entities.Designation import Designation, DesignationEndTypes
+    from .entities.Designation import Designation, DesignationEndTypes, DesignationAdjusted, DesignationConvalidation, DesignationLabel
     from .entities.Place import PlaceTypes, Place
     from .entities.LeaveLicense import PersonalLeaveLicense, DesignationLeaveLicense
     from .entities.ExternalSeniority import ExternalSeniority
