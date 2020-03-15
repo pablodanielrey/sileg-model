@@ -27,6 +27,9 @@ class SilegModel:
     def get_functions_by_name(self, session, name):
         return [f.id for f in session.query(Function.id).filter(Function.name == name).all()]
 
+    def get_designations_by_functions(self, session, fids=[], historic=False, deleted=False):
+        return [d.id for d in session.query(Designation.id).filter(Designation.function_id.in_(fids)).all()]
+
     def get_designations(self, session, dids=[], historic=False, deleted=False):
         query = session.query(Designation)
         """
