@@ -1,4 +1,4 @@
-
+import logging
 from sileg_model.model import open_session
 from sileg_model.model.SilegModel import SilegModel
 from sileg_model.model.entities.Designation import DesignationLabel, Designation, DesignationTypes, DesignationEndTypes
@@ -15,24 +15,28 @@ if __name__ == '__main__':
         labels = session.query(DesignationLabel).filter(DesignationLabel.name == 'sileg_viejo_replacement').all()
         for label in labels:
             
-            did = label.designation_id
-            rep_id = label.value
+            try:
 
-            """
-                ///////////////////////////////////
-                en el caso de que en el sileg viejo reempa signifique que es la designación a reemplazar
-                ///////////////////////////////////
-            """
+                did = label.designation_id
+                rep_id = label.value
 
-            ''' busco la designacion que en el sileg viejo tenia id rep_id '''
-            replaced_did = _sileg_viejo_id_to_uuid(session, rep_id)
+                """
+                    ///////////////////////////////////
+                    en el caso de que en el sileg viejo reempa signifique que es la designación a reemplazar
+                    ///////////////////////////////////
+                """
 
-            ''' busco la desigancion a ser actualizada '''
-            replacement = session.query(Designation).filter(Designation.id == did).one()
-            replacement.designation_id = replaced_did
-            replacement.type = DesignationTypes.REPLACEMENT
-            replacement.end_type = DesignationEndTypes.REPLACEMENT
+                ''' busco la designacion que en el sileg viejo tenia id rep_id '''
+                replaced_did = _sileg_viejo_id_to_uuid(session, rep_id)
 
+                ''' busco la desigancion a ser actualizada '''
+                replacement = session.query(Designation).filter(Designation.id == did).one()
+                replacement.designation_id = replaced_did
+                replacement.type = DesignationTypes.REPLACEMENT
+                replacement.end_type = DesignationEndTypes.REPLACEMENT
+
+            except Exception as e:
+                logging.exception(e)
 
             """ 
                 ////////////////////////////////////////
