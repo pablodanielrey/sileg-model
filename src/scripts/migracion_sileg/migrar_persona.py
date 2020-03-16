@@ -791,6 +791,28 @@ def _eliminar_designaciones_anteriores(session, uid):
                 session.delete(l)
                 session.commit()
 
+            """
+                la eliminación física de las designaciones es muy costosa.
+                asi que las actualzio para dejarlas sin usuario, ni designacion asociada.
+                asi son procesadas por otro script en background para ser elimnadas
+            """
+            for dp in d.designations:
+                for baja in dp.designations:
+                    baja.designation_id = None
+                    baja.user_id = None
+                    baja.comments = 'TODELETE'
+                    session.commit()
+                dp.designation_id = None
+                dp.user_id = None
+                dp.comments = 'TODELETE'
+                session.commit()
+            print(f'marcando para eliminar {d.id}')
+            d.user_id = None
+            d.designation_id = None
+            d.comments = 'TODELETE'
+            session.commit()
+            
+            """
             for dp in d.designations:
                 ''' prorrogas '''
                 for baja in dp.designations:
@@ -803,6 +825,7 @@ def _eliminar_designaciones_anteriores(session, uid):
             print(f'eliminando la designacion original {d.id}')
             session.delete(d)
             session.commit()
+            """
 
     except Exception as e:
         print(e)
