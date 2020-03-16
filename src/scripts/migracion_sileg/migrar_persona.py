@@ -27,6 +27,7 @@ from sileg_model.model import open_session
 from sileg_model.model.SilegModel import SilegModel
 from users.model import open_session as open_users_session
 from users.model.UsersModel import UsersModel
+from users.model.entities.User import User, IdentityNumber
 
 import uuid
 
@@ -800,15 +801,18 @@ def _eliminar_designaciones_anteriores(session, uid):
                 for baja in dp.designations:
                     baja.designation_id = None
                     baja.user_id = None
+                    baja.place_id = None
                     baja.comments = 'TODELETE'
                     session.commit()
                 dp.designation_id = None
                 dp.user_id = None
+                dp.place_id = None
                 dp.comments = 'TODELETE'
                 session.commit()
             print(f'marcando para eliminar {d.id}')
             d.user_id = None
             d.designation_id = None
+            d.place_id = None
             d.comments = 'TODELETE'
             session.commit()
             
@@ -832,11 +836,25 @@ def _eliminar_designaciones_anteriores(session, uid):
         logging.exception(e)
 
 
-def _buscar_usuario_uid(dni):
+def _buscar_o_crear_usuario_uid(dni):
     with open_users_session() as session:
         uid = UsersModel.get_uid_person_number(session, dni)
         if not uid:
-            raise Exception(f'no se encuentra uid para el dni {dni}')
+            uid = str(uuid.uuid4())
+            user = User()
+            user.id = uid
+            user.name = 'Importado del sileg.'
+            user.lastname = 'Importado del sileg'
+            session.add(user)
+
+            idni = IdentityNumber()
+            idni.id = str(uuid.uuid4())
+            idni.number = dni
+            idni.user_id = uid
+            session.add(idni)
+
+            session.commit()
+            
     return uid
 
 def _leer_dnis_ya_procesados():
@@ -890,7 +908,7 @@ if __name__ == '__main__':
         _dump_de_funciones_json(functions)
 
         print(f'buscando usuario {dni}')
-        uid = _buscar_usuario_uid(dni)
+        uid = _buscar_o_crear_usuario_uid(dni)
 
         
         silegModel = SilegModel()
