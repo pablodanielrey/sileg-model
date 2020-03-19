@@ -1,10 +1,11 @@
 
-from sqlalchemy import or_
+from sqlalchemy import or_, desc
 from .entities.Function import Function, FunctionTypes
 from .entities.Designation import Designation, DesignationEndTypes
 from .entities.Place import PlaceTypes, Place
 from .entities.LeaveLicense import PersonalLeaveLicense, DesignationLeaveLicense
 from .entities.ExternalSeniority import ExternalSeniority
+from .entities.Log import SilegLog
 
 class SilegModel:
 
@@ -92,3 +93,12 @@ class SilegModel:
 
     def get_dlicenses(self, session, lids=[]):
         return session.query(DesignationLeaveLicense).filter(DesignationLeaveLicense.id.in_(lids)).all()
+
+    def get_logs(self, session, count=None):
+        q = session.query(SilegLog).order_by(SilegLog.created.desc())
+        if count:
+            q = q.limit(count)
+        return q.all()
+
+    def get_log(self, session, lid):
+        return session.query(SilegLog).filter(SilegLog.id == lid).one_or_none()
