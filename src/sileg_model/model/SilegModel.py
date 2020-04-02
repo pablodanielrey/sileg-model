@@ -34,16 +34,8 @@ class SilegModel:
             query = query.filter(Designation.deleted == None)
         return [d.id for d in query.filter(Designation.function_id.in_(fids)).all()]
 
-    def get_designations(self, session, dids=[], historic=False, deleted=False):
-        query = session.query(Designation)
-        
-        if not historic:
-            query = query.filter(Designation.historic == False)
-        
-        if not deleted:
-            query = query.filter(Designation.deleted == None)
-
-        return query.filter(Designation.id.in_(dids)).all()
+    def get_designations(self, session, dids=[]):
+        return session.query(Designation).filter(Designation.id.in_(dids)).all()
 
     def get_designations_by_uuid(self, session, uid):
         """ TODO: ver con los chicos que uid debe ser una lista """
