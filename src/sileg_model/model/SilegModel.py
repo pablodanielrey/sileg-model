@@ -39,8 +39,6 @@ class SilegModel:
         
         if not historic:
             query = query.filter(Designation.historic == False)
-        else:
-            query = query.filter(Designation.historic == True)
         
         if not deleted:
             query = query.filter(Designation.deleted == None)
