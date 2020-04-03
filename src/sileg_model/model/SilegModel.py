@@ -1,4 +1,6 @@
 
+import datetime
+
 from sqlalchemy import or_, desc
 from .entities.Function import Function, FunctionTypes
 from .entities.Designation import Designation, DesignationEndTypes
@@ -48,14 +50,14 @@ class SilegModel:
         return session.query(Place).filter(Place.id.in_(pids)).all()
 
     def get_all_places(self, session, historic=False, deleted=False):
-        q = session.query(Place.id).all()
+        q = session.query(Place.id)
         if not historic:
             now = datetime.datetime.utcnow()
             q = q.filter(or_(Place.end == None, Place.end >= now))
         
         if not deleted:
             q = q.filter(Place.deleted == None)
-            
+
         return [p.id for p in q.all()]
 
     def get_places_by_name(self, session, name):
