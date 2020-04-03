@@ -35,6 +35,9 @@ class Place(Base):
     telephone = Column(String)
     email = Column(String)
 
+    start = Column(DateTime)
+    end = Column(DateTime)
+
     parent_id = Column(String, ForeignKey('places.id'))
     children = relationship("Place",  foreign_keys=[parent_id])
 

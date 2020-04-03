@@ -12,7 +12,7 @@
 from setuptools import setup, find_packages
 
 setup(name='sileg-model',
-          version='0.1.32',
+          version='0.1.34',
           description='proyecto de las designaciones de docentes/no-docentes de la facultad',
           url='https://github.com/pablodanielrey/sileg-model',
           author='Desarrollo DiTeSi, FCE',
@@ -29,7 +29,8 @@ setup(name='sileg-model',
           install_requires=[
                             'psycopg2-binary',
                             'requests',
-                            'SQLAlchemy'
+                            'SQLAlchemy',
+                            'SQLAlchemy-serializer'
                           ],
           entry_points={
           }
