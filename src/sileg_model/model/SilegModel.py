@@ -3,7 +3,7 @@ import datetime
 
 from sqlalchemy import or_, desc
 from .entities.Function import Function, FunctionTypes
-from .entities.Designation import Designation, DesignationEndTypes
+from .entities.Designation import Designation, DesignationEndTypes, DesignationStatus
 from .entities.Place import PlaceTypes, Place
 from .entities.LeaveLicense import PersonalLeaveLicense, DesignationLeaveLicense
 from .entities.ExternalSeniority import ExternalSeniority
