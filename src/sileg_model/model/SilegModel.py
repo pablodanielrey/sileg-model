@@ -36,6 +36,9 @@ class SilegModel:
             query = query.filter(Designation.deleted == None)
         return [d.id for d in query.filter(Designation.function_id.in_(fids)).all()]
 
+    def get_designations_pending(self, session):
+        return [d.id for d in session.query(Designation).filter(Designation.status == DesignationStatus.PENDING)]
+    
     def get_designations(self, session, dids=[]):
         return session.query(Designation).filter(Designation.id.in_(dids)).all()
 
